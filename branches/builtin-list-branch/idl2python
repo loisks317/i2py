@@ -68,7 +68,7 @@ exit_stat = 0
 def process_file(input):
    global exit_stat
 
-   input = ''.join(input)
+   input = '\n'.join(input)
    prog = i2py.parse(input)
    if prog:
       if debug:
@@ -92,9 +92,9 @@ for line in fileinput.input(args):
 
       # Start new file
       filename = fileinput.filename()
-      input = [line]
+      input = [line.rstrip('\n\r')]
    else:
-      input.append(line)
+      input.append(line.rstrip('\n\r'))
 else:
    if input:  process_file(input)
 
