@@ -27,9 +27,8 @@ need before being passed to the parser.  It also generates the lexer with lex
 import re
 import lex
 import ir
-import fmap
+import maps
 import error
-import builtins
 
 tokens = {
   't_STRING'		: r"""('[^'\n]*')|("[^"\n]*")""",
@@ -141,7 +140,7 @@ def t_IDENTIFIER(t):
       value = str(t.value)
       if value[0] == "!":
          t.type = 'SYS_VAR'
-      elif (value in fmap.mappings) or (value in builtins.builtins):
+      elif value in maps.subroutines:
          t.type = 'SUBROUTINE_ID'
 
    return t

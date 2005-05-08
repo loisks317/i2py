@@ -23,10 +23,7 @@ This code handles the mapping of IDL functions to Python ones.  It's a nasty
 mess that needs to be cleaned up!
 """
 
-procedures = {}
-functions = {}
-
-extra_code = []
+_extra_code = []
 
 
 class Error(Exception):
@@ -146,8 +143,8 @@ class SubroutineMapping(object):
       fdef += '\n'
 
       if self.extracode:
-         if self.extracode not in extra_code:
-	    extra_code.append(self.extracode)
+         if self.extracode not in _extra_code:
+	    _extra_code.append(self.extracode)
 
       return fdef
 
@@ -192,8 +189,8 @@ class SubroutineMapping(object):
 	    output.append(keydict[name])
 
       if self.extracode:
-         if self.extracode not in extra_code:
-	    extra_code.append(self.extracode)
+         if self.extracode not in _extra_code:
+	    _extra_code.append(self.extracode)
 
       if self.callfunc:
          return self.callfunc(input, output)
@@ -206,20 +203,4 @@ class SubroutineMapping(object):
 
       return '%s%s(%s)' % (output, self.pyname, input)
 
-
-def add_proc(name, pyname=None, inpars=(), outpars=(), noptional=0,
-             inkeys=(), outkeys=(), callfunc=None, extracode=None):
-   map = SubroutineMapping(name, pyname=pyname, function=False,
-                           inpars=inpars, outpars=outpars, noptional=noptional,
-                           inkeys=inkeys, outkeys=outkeys, callfunc=callfunc,
-			   extracode=extracode)
-   procedures[map.name] = map
-
-
-def add_func(name, pyname=None, pars=(), noptional=0, keys=(), callfunc=None,
-             extracode=None):
-   map = SubroutineMapping(name, pyname=pyname, function=True, inpars=pars,
-                           noptional=noptional, inkeys=keys, callfunc=callfunc,
-			   extracode=extracode)
-   functions[map.name] = map
 

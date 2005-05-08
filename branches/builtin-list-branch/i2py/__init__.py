@@ -21,6 +21,6 @@
 __version__ = '0.0.9'
 
 from parser import parse
-from fmap import add_proc, add_func
+from maps import add_sub, del_sub, map_proc, map_func
 from error import error_occurred, get_error_list, clear_error_list
 

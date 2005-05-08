@@ -28,7 +28,6 @@ parser.py.
 """
 
 import yacc
-import fmap
 import maps
 import error
 

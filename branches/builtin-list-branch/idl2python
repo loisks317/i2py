@@ -41,8 +41,7 @@ import getopt
 import fileinput
 import os.path
 
-import i2py
-from i2py import add_proc, add_func
+from i2py import *
 
 default_rcfile = 'i2pyrc'
 rcfile = None
@@ -68,19 +67,19 @@ exit_stat = 0
 def process_file(input):
    global exit_stat
 
-   input = '\n'.join(input)
-   prog = i2py.parse(input)
+   input = '\n'.join(input) + '\n'
+   prog = parse(input)
    if prog:
       if debug:
          prog = str(prog).rstrip('\n')
       else:
          prog = prog.pycode().rstrip('\n')
 
-   if i2py.error_occurred():
-      for e in i2py.get_error_list():
+   if error_occurred():
+      for e in get_error_list():
          sys.stderr.write('%s:%s\n' % (filename, e))
       exit_stat = 1
-      i2py.clear_error_list()
+      clear_error_list()
    else:
       print prog
 
