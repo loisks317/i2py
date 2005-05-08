@@ -101,16 +101,11 @@ statement
 	| simple_statement
 
 compound_statement
-	: labeled_statement
-	| if_statement
+	: if_statement
 	| selection_statement
 	| for_statement
 	| while_statement
 	| repeat_statement
-
-labeled_statement
-	: expression COLON statement
-	| expression COLON NEWLINE statement
 
 if_statement 
 	: IF expression THEN if_clause %prec LOWER_THAN_ELSE
@@ -119,14 +114,18 @@ if_statement
 if_clause
 	: statement
 	| BEGIN NEWLINE statement_list ENDIF
+	| BEGIN NEWLINE statement_list END
 
 else_clause
 	: statement
 	| BEGIN NEWLINE statement_list ENDELSE
+	| BEGIN NEWLINE statement_list END
 
 selection_statement
 	: CASE selection_statement_body ENDCASE
+	| CASE selection_statement_body END
 	| SWITCH selection_statement_body ENDSWITCH
+	| SWITCH selection_statement_body END
 
 selection_statement_body
 	: expression OF NEWLINE selection_clause_list
@@ -144,6 +143,7 @@ selection_clause
 for_statement
 	: FOR for_index DO statement
 	| FOR for_index DO BEGIN NEWLINE statement_list ENDFOR
+	| FOR for_index DO BEGIN NEWLINE statement_list END
 
 for_index
 	: IDENTIFIER EQUALS expression COMMA expression
@@ -152,16 +152,19 @@ for_index
 while_statement
 	: WHILE expression DO statement
 	| WHILE expression DO BEGIN NEWLINE statement_list ENDWHILE
+	| WHILE expression DO BEGIN NEWLINE statement_list END
 
 repeat_statement
 	: REPEAT statement UNTIL expression
 	| REPEAT BEGIN NEWLINE statement_list ENDREP UNTIL expression
+	| REPEAT BEGIN NEWLINE statement_list END UNTIL expression
 
 simple_statement
 	: COMMON identifier_list
 	| COMPILE_OPT identifier_list
 	| FORWARD_FUNCTION identifier_list
 	| ON_IOERROR COMMA IDENTIFIER
+	| expression COLON
 	| jump_statement
 	| expression_list
 
