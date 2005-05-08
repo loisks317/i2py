@@ -459,6 +459,8 @@ class JumpStatement(Node):
    def __str__(self):
       if self.RETURN and self.expression:
          return 'RETURN, %s' % self.expression
+      if self.GOTO:
+         return 'GOTO, %s' % self.IDENTIFIER
       return ' '.join([ str(c) for c in self ])
    def pycode(self):
       if self.GOTO:

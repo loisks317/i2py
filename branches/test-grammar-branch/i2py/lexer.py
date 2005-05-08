@@ -65,8 +65,7 @@ globals().update(tokens)
 tokens = tuple([ t[2:] for t in tokens.keys() ])
 
 tokens += (
-  'AMPAMP', 'EXTRA', 'IDENTIFIER', 'NEWLINE', 'NUMBER', 'OP_EQUALS',
-  'SUBROUTINE_ID', 'SYS_VAR',
+  'AMPAMP', 'EXTRA', 'IDENTIFIER', 'NEWLINE', 'NUMBER', 'OP_EQUALS', 'SYS_VAR',
 )
 
 keywords = (
@@ -140,14 +139,12 @@ def t_IDENTIFIER(t):
       value = str(t.value)
       if value[0] == "!":
          t.type = 'SYS_VAR'
-      elif value in maps.subroutines:
-         t.type = 'SUBROUTINE_ID'
 
    return t
 
 def t_continuation(t):
-   r'\$\n*'
-   t.lineno += 1
+   r'\$[ \t]*(;.*)?\n+'
+   t.lineno += t.value.count('\n')
 
 # Need this to avoid treating '&&' as NEWLINE
 def t_AMPAMP(t):

@@ -163,8 +163,7 @@ simple_statement
 	| FORWARD_FUNCTION identifier_list
 	| ON_IOERROR COMMA IDENTIFIER
 	| jump_statement
-	| procedure_call
-	| expression
+	| expression_list
 
 identifier_list
 	: IDENTIFIER
@@ -173,22 +172,13 @@ identifier_list
 jump_statement
 	: RETURN
 	| RETURN COMMA expression
-	| GOTO IDENTIFIER
+	| GOTO COMMA IDENTIFIER
 	| BREAK
 	| CONTINUE
 
-procedure_call
-	: SUBROUTINE_ID
-	| SUBROUTINE_ID COMMA argument_list
-
-argument_list
-	: argument
-	| argument_list COMMA argument
-
-argument
+expression_list
 	: expression
-	| DIVIDE IDENTIFIER
-	| EXTRA EQUALS IDENTIFIER
+	| expression_list COMMA expression
 
 expression
 	: assignment_expression
@@ -262,8 +252,8 @@ pointer_expression
 postfix_expression
 	: primary_expression
 	| postfix_expression LBRACKET subscript_list RBRACKET
-	| SUBROUTINE_ID LPAREN RPAREN
-	| SUBROUTINE_ID LPAREN argument_list RPAREN
+	| IDENTIFIER LPAREN RPAREN
+	| IDENTIFIER LPAREN expression_list RPAREN
 	| postfix_expression DOT IDENTIFIER
 	| postfix_expression DOT LPAREN expression RPAREN
 
@@ -274,6 +264,8 @@ primary_expression
 	| LPAREN expression RPAREN
 	| LBRACKET expression_list RBRACKET
 	| LBRACE structure_field_list RBRACE
+	| DIVIDE IDENTIFIER
+	| EXTRA EQUALS IDENTIFIER
 
 constant
 	: NUMBER
@@ -291,10 +283,6 @@ subscript
 	| expression COLON TIMES COLON expression
 	| TIMES
 
-expression_list
-	: expression
-	| expression_list COMMA expression
-
 structure_field_list
 	: structure_field
 	| structure_field_list COMMA structure_field
@@ -307,6 +295,6 @@ structure_field
 
 build_productions()
 
-yacc.yacc(debug=False, tabmodule='ytab', debugfile='y.output')
+yacc.yacc(debug=True, tabmodule='ytab', debugfile='y.output')
 parse = yacc.parse
 
