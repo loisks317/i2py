@@ -29,6 +29,7 @@ import lex
 import ir
 import fmap
 import error
+import builtins
 
 tokens = {
   't_STRING'		: r"""('[^'\n]*')|("[^"\n]*")""",
@@ -65,8 +66,8 @@ globals().update(tokens)
 tokens = tuple([ t[2:] for t in tokens.keys() ])
 
 tokens += (
-  'AMPAMP', 'EXTRA', 'FUNCTION_ID', 'IDENTIFIER', 'NEWLINE', 'NUMBER',
-  'OP_EQUALS', 'PRO_ID', 'SYS_VAR',
+  'AMPAMP', 'EXTRA', 'IDENTIFIER', 'NEWLINE', 'NUMBER', 'OP_EQUALS',
+  'SUBROUTINE_ID', 'SYS_VAR',
 )
 
 keywords = (
@@ -140,10 +141,8 @@ def t_IDENTIFIER(t):
       value = str(t.value)
       if value[0] == "!":
          t.type = 'SYS_VAR'
-      elif value in fmap.procedures:
-         t.type = 'PRO_ID'
-      elif value in fmap.functions:
-         t.type = 'FUNCTION_ID'
+      elif (value in fmap.mappings) or (value in builtins.builtins):
+         t.type = 'SUBROUTINE_ID'
 
    return t
 

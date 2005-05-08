@@ -202,7 +202,7 @@ _in_function = False
 
 class SubroutineDefinition(Node):
    def __str__(self):
-      return '%s %s%s' % tuple(self)
+      return '%s %s' % tuple(self)
    def pycode(self):
       global _in_pro, _in_function
 
@@ -247,7 +247,8 @@ class SubroutineBody(Node):
          params = str(self.parameter_list)
       else:
          params = ''
-      return '%s\n%sEND\n' % (params, indent(self.statement_list))
+      return '%s%s\n%sEND\n' % (self.IDENTIFIER, params,
+                                indent(self.statement_list))
 
 class ParameterList(Node):
    def __str__(self):
@@ -477,8 +478,8 @@ class JumpStatement(Node):
 class ProcedureCall(Node):
    def __str__(self):
       if not self.argument_list:
-         return str(self.PRO_ID)
-      return '%s, %s' % (self.PRO_ID, self.argument_list)
+         return str(self.SUBROUTINE_ID)
+      return '%s, %s' % (self.SUBROUTINE_ID, self.argument_list)
    def pycode(self):
       if self.argument_list:
          pars, keys = self.argument_list.get_pars_and_keys()

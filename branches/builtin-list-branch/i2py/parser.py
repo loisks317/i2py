@@ -76,12 +76,12 @@ program
 	| program subroutine_definition
 
 subroutine_definition
-	: PRO PRO_ID subroutine_body
-	| FUNCTION FUNCTION_ID subroutine_body
+	: PRO subroutine_body
+	| FUNCTION subroutine_body
 
 subroutine_body
-	: NEWLINE statement_list END NEWLINE
-	| parameter_list NEWLINE statement_list END NEWLINE
+	: IDENTIFIER NEWLINE statement_list END NEWLINE
+	| IDENTIFIER parameter_list NEWLINE statement_list END NEWLINE
 
 parameter_list
 	: COMMA parameter
@@ -178,8 +178,8 @@ jump_statement
 	| CONTINUE
 
 procedure_call
-	: PRO_ID
-	| PRO_ID COMMA argument_list
+	: SUBROUTINE_ID
+	| SUBROUTINE_ID COMMA argument_list
 
 argument_list
 	: argument
@@ -262,8 +262,8 @@ pointer_expression
 postfix_expression
 	: primary_expression
 	| postfix_expression LBRACKET subscript_list RBRACKET
-	| FUNCTION_ID LPAREN RPAREN
-	| FUNCTION_ID LPAREN argument_list RPAREN
+	| SUBROUTINE_ID LPAREN RPAREN
+	| SUBROUTINE_ID LPAREN argument_list RPAREN
 	| postfix_expression DOT IDENTIFIER
 	| postfix_expression DOT LPAREN expression RPAREN
 
@@ -307,6 +307,6 @@ structure_field
 
 build_productions()
 
-yacc.yacc(debug=0, tabmodule='ytab', debugfile='y.output')
+yacc.yacc(debug=False, tabmodule='ytab', debugfile='y.output')
 parse = yacc.parse
 
