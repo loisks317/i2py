@@ -101,11 +101,16 @@ statement
 	| simple_statement
 
 compound_statement
-	: if_statement
+	: labeled_statement
+	| if_statement
 	| selection_statement
 	| for_statement
 	| while_statement
 	| repeat_statement
+
+labeled_statement
+	: expression COLON statement
+	| expression COLON NEWLINE statement
 
 if_statement 
 	: IF expression THEN if_clause %prec LOWER_THAN_ELSE
@@ -164,9 +169,9 @@ simple_statement
 	| COMPILE_OPT identifier_list
 	| FORWARD_FUNCTION identifier_list
 	| ON_IOERROR COMMA IDENTIFIER
-	| expression COLON
 	| jump_statement
-	| expression_list
+	| procedure_call
+	| expression
 
 identifier_list
 	: IDENTIFIER
@@ -179,9 +184,18 @@ jump_statement
 	| BREAK
 	| CONTINUE
 
-expression_list
+procedure_call
+	: SUBROUTINE_ID
+	| SUBROUTINE_ID COMMA argument_list
+
+argument_list
+	: argument
+	| argument_list COMMA argument
+
+argument
 	: expression
-	| expression_list COMMA expression
+	| DIVIDE IDENTIFIER
+	| EXTRA EQUALS IDENTIFIER
 
 expression
 	: assignment_expression
@@ -267,8 +281,6 @@ primary_expression
 	| LPAREN expression RPAREN
 	| LBRACKET expression_list RBRACKET
 	| LBRACE structure_field_list RBRACE
-	| DIVIDE IDENTIFIER
-	| EXTRA EQUALS IDENTIFIER
 
 constant
 	: NUMBER
@@ -285,6 +297,10 @@ subscript
 	| expression COLON TIMES
 	| expression COLON TIMES COLON expression
 	| TIMES
+
+expression_list
+	: expression
+	| expression_list COMMA expression
 
 structure_field_list
 	: structure_field

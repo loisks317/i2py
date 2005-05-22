@@ -257,6 +257,12 @@ class ParameterList(Node):
          plist = '' 
       return '%s, %s' % (plist, self.parameter)
 
+class LabeledStatement(Node):
+   def __str__(self):
+      return '%s: %s' % (self.expression, self.statement)
+   def pycode(self):
+      return '%s:\n%s' % (pycomment(self.expression), pycode(self.statement))
+
 class IfStatement(Node):
    def __str__(self):
       s = 'IF %s THEN %s' % (self.expression, self.if_clause)
