@@ -60,8 +60,8 @@ def build_productions():
    exec ''.join(funcdefs) in globals()
 
 precedence = (
-   ('nonassoc', 'LOWER_THAN_ELSE'),
-   ('nonassoc', 'ELSE'),
+   ('nonassoc', 'LOWER_THAN_ELSE', 'LOWER_THAN_EQUALS'),
+   ('nonassoc', 'ELSE', 'EQUALS'),
 )
 
 productions = '''
@@ -109,8 +109,8 @@ compound_statement
 	| repeat_statement
 
 labeled_statement
-	: expression COLON statement
-	| expression COLON NEWLINE statement
+	: IDENTIFIER COLON statement
+	| IDENTIFIER COLON NEWLINE statement
 
 if_statement 
 	: IF expression THEN if_clause %prec LOWER_THAN_ELSE
@@ -171,7 +171,8 @@ simple_statement
 	| ON_IOERROR COMMA IDENTIFIER
 	| jump_statement
 	| procedure_call
-	| expression
+	| assignment_statement
+	| increment_statement
 
 identifier_list
 	: IDENTIFIER
@@ -185,28 +186,35 @@ jump_statement
 	| CONTINUE
 
 procedure_call
-	: SUBROUTINE_ID
-	| SUBROUTINE_ID COMMA argument_list
+	: IDENTIFIER
+	| IDENTIFIER COMMA argument_list
 
 argument_list
 	: argument
 	| argument_list COMMA argument
 
 argument
-	: expression
+	: expression %prec LOWER_THAN_EQUALS
+	| IDENTIFIER EQUALS expression
 	| DIVIDE IDENTIFIER
 	| EXTRA EQUALS IDENTIFIER
 
-expression
-	: assignment_expression
-
-assignment_expression
-	: conditional_expression
-	| pointer_expression assignment_operator assignment_expression
+assignment_statement
+	: pointer_expression assignment_operator expression
 
 assignment_operator
 	: EQUALS
 	| OP_EQUALS
+
+increment_statement
+	: PLUSPLUS pointer_expression
+	| MINUSMINUS pointer_expression
+	| pointer_expression PLUSPLUS
+	| pointer_expression MINUSMINUS
+
+expression
+	: assignment_statement
+	| conditional_expression
 
 conditional_expression
 	: logical_expression
@@ -257,10 +265,7 @@ unary_expression
 	: pointer_expression
 	| PLUS pointer_expression
 	| MINUS pointer_expression
-	| PLUSPLUS pointer_expression
-	| MINUSMINUS pointer_expression
-	| pointer_expression PLUSPLUS
-	| pointer_expression MINUSMINUS
+	| increment_statement
 
 pointer_expression
 	: postfix_expression
@@ -270,7 +275,7 @@ postfix_expression
 	: primary_expression
 	| postfix_expression LBRACKET subscript_list RBRACKET
 	| IDENTIFIER LPAREN RPAREN
-	| IDENTIFIER LPAREN expression_list RPAREN
+	| IDENTIFIER LPAREN argument_list RPAREN
 	| postfix_expression DOT IDENTIFIER
 	| postfix_expression DOT LPAREN expression RPAREN
 
@@ -308,12 +313,12 @@ structure_field_list
 
 structure_field
 	: expression
-	| expression COLON expression
+	| IDENTIFIER COLON expression
 	| INHERITS IDENTIFIER
 '''
 
 build_productions()
 
-yacc.yacc(debug=True, tabmodule='ytab', debugfile='y.output')
+yacc.yacc(method='LALR', debug=True, tabmodule='ytab', debugfile='y.output')
 parse = yacc.parse
 

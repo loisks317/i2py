@@ -1,12 +1,4 @@
 #-----------------------------------------------------------------------------
-# CHANGES FROM ORIGINAL VERSION (line numbers refer to unmodified file):
-#
-# 2005-04-16  Chris Stawarz  <chris@pseudogreen.org>
-#	* Modified lines 2033 and 2366 so that output files are written to the
-#	directory in which yacc.py resides, instead of in the current directory
-#-----------------------------------------------------------------------------
-
-#-----------------------------------------------------------------------------
 # ply: yacc.py
 #
 # Author(s): David M. Beazley (beazley@cs.uchicago.edu)
@@ -554,7 +546,7 @@ class Production:
         self.lr1_added = 0    # Flag indicating whether or not added to LR1
         self.usyms = [ ]
         self.lookaheads = { }
-        self.lk_added = 0
+        self.lk_added = { }
         self.setnumbers = [ ]
         
     def __str__(self):
@@ -1510,15 +1502,15 @@ def lr1_closure(I, setnumber = 0):
             
             if jlr_index < len(jprod) - 1 and Nonterminals.has_key(jprod[jlr_index+1]):
                 first_syms = []
-                if j.lk_added < len(j.lookaheads[setnumber]):
-                    for a in j.lookaheads[setnumber][j.lk_added:]:
+                if j.lk_added.setdefault(setnumber, 0) < len(j.lookaheads[setnumber]):
+                    for a in j.lookaheads[setnumber][j.lk_added[setnumber]:]:
                         # find b in FIRST(Xa) if j = [A->a.BX,a]
                         temp_first_syms = first(jprodslice + (a,))
                         for x in temp_first_syms:
                             if x not in first_syms:
                                 first_syms.append(x)
 
-                j.lk_added = len(j.lookaheads[setnumber])
+                j.lk_added[setnumber] = len(j.lookaheads[setnumber])
 
                 for x in j.lrafter:
                     
@@ -1529,8 +1521,6 @@ def lr1_closure(I, setnumber = 0):
                             if s not in _xlook:
                                 _xlook.append(s)
                                 didadd = 1
-                            else:
-                                didadd = 0
                     else:        
                         x.lr_next.lookaheads[setnumber] = first_syms
                         didadd = 1
@@ -1556,16 +1546,14 @@ def add_lookaheads(K):
             for item in J:
                 if item.lr_index < len(item.prod)-1:
                     for lookahead in item.lookaheads[setnumber]:
+                        goto_setnumber = lr0_goto_setnumber(setnumber, item.prod[item.lr_index+1])
+                        next = None
                         if lookahead != '#':
-                            goto_setnumber = lr0_goto_setnumber(setnumber, item.prod[item.lr_index+1])
-                            next = None
                             if item.lr_next in K[goto_setnumber]:
                                 next = item.lr_next
                             if next:
                                 spontaneous.append((next, (lookahead, goto_setnumber)))
                         else:
-                            goto_setnumber = lr0_goto_setnumber(setnumber, item.prod[item.lr_index+1])
-                            next = None
                             if goto_setnumber > -1:
                                 if item.lr_next in K[goto_setnumber]:
                                     next = item.lr_next
