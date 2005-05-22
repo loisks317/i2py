@@ -31,10 +31,7 @@ import ir
 import error
 
 def p_error(p):
-   msg = 'invalid syntax at %s' % repr(str(p.value))
-   if p.type == 'IDENTIFIER':
-      msg += ' (undeclared procedure or function?)'
-   error.syntax_error(msg, p.lineno)
+   error.syntax_error('invalid syntax at %s' % repr(str(p.value)), p.lineno)
 
 def build_productions():
    funcdefs = []

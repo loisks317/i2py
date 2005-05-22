@@ -190,8 +190,8 @@ class TranslationUnit(Node):
       return str(self[-1])
    def pycode(self):
       parts = [pycode(self[-1])]
-      if fmap.extra_code:
-         parts.append('\n'.join(fmap.extra_code))
+      #if fmap.extra_code:
+      #   parts.append('\n'.join(fmap.extra_code))
       parts.append('from numarray import *')
       parts.reverse()
       return '\n\n'.join(parts)
@@ -259,7 +259,7 @@ class ParameterList(Node):
 
 class LabeledStatement(Node):
    def __str__(self):
-      return '%s: %s' % (self.expression, self.statement)
+      return '%s: %s' % (self.IDENTIFIER, self.statement)
    def pycode(self):
       return '%s:\n%s' % (pycomment(self.expression), pycode(self.statement))
 
@@ -461,7 +461,7 @@ class JumpStatement(Node):
          return 'RETURN, %s' % self.expression
       if self.GOTO:
          return 'GOTO, %s' % self.IDENTIFIER
-      return ' '.join([ str(c) for c in self ])
+      return Node.__str__(self)
    def pycode(self):
       if self.GOTO:
          error.conversion_error('cannot convert GOTO statements; please ' +
@@ -479,8 +479,8 @@ class JumpStatement(Node):
 class ProcedureCall(Node):
    def __str__(self):
       if not self.argument_list:
-         return str(self.SUBROUTINE_ID)
-      return '%s, %s' % (self.SUBROUTINE_ID, self.argument_list)
+         return str(self.IDENTIFIER)
+      return '%s, %s' % (self.IDENTIFIER, self.argument_list)
    def pycode(self):
       if self.argument_list:
          pars, keys = self.argument_list.get_pars_and_keys()
@@ -526,7 +526,7 @@ class _SpacedExpression(Node):
          return '%s%s' % (pycode(self[0]), pycode(self[1]))
       return ' '.join([ pycode(c) for c in self ])
 
-class AssignmentExpression(_SpacedExpression):
+class AssignmentStatement(_SpacedExpression):
    def pycode(self):
       if (len(self) == 1) or self.assignment_operator.EQUALS:
          return _SpacedExpression.pycode(self)
@@ -550,6 +550,12 @@ class AssignmentExpression(_SpacedExpression):
       if op in binops:
          return '%s = %s %s %s' % (lvalue, lvalue, binops[op], rvalue)
       return '%s = %s(%s, %s)' % (lvalue, funcops[op], lvalue, rvalue)
+
+class IncrementStatement(Node):
+   def pycode(self):
+      # FIXME: implement this!
+      error.conversion_error("can't handle ++,-- yet", self.lineno)
+      return ''
 
 class ConditionalExpression(_SpacedExpression):
    def pycode(self):
@@ -645,14 +651,6 @@ class ExponentiativeExpression(_SpacedExpression):
       return '%s ** %s' % (pycode(self.exponentiative_expression),
                            pycode(self.unary_expression))
 
-class UnaryExpression(Node):
-   def pycode(self):
-      if self.PLUSPLUS or self.MINUSMINUS:
-         # FIXME: implement this!
-         error.conversion_error("can't handle ++,-- yet", self.lineno)
-         return ''
-      return Node.pycode(self)
-
 class PointerExpression(Node):
    def pycode(self):
       if self.TIMES:
@@ -669,7 +667,7 @@ class PostfixExpression(Node):
 	                        self.lineno)
          return ''
 
-      if not self.FUNCTION_ID:
+      if not self.IDENTIFIER:
          return Node.pycode(self)
 
       if self.argument_list:
