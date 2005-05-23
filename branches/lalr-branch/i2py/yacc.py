@@ -2025,8 +2025,8 @@ def lalr_parse_table():
 # This function writes the LR parsing tables to a file
 # -----------------------------------------------------------------------------
 
-def lr_write_tables(modulename=tab_module):
-    filename = os.path.join(os.path.dirname(__file__),modulename) + ".py"
+def lr_write_tables(modulename=tab_module,outputdir=''):
+    filename = os.path.join(outputdir,modulename) + ".py"
     try:
         f = open(filename,"w")
 
@@ -2158,7 +2158,7 @@ def lr_read_tables(module=tab_module,optimize=0):
 # Build the parser module
 # -----------------------------------------------------------------------------
 
-def yacc(method=default_lr, debug=yaccdebug, module=None, tabmodule=tab_module, start=None, check_recursion=1, optimize=0,write_tables=1,debugfile=debug_file):
+def yacc(method=default_lr, debug=yaccdebug, module=None, tabmodule=tab_module, start=None, check_recursion=1, optimize=0,write_tables=1,debugfile=debug_file,outputdir=''):
     global yaccdebug
     yaccdebug = debug
     
@@ -2355,11 +2355,11 @@ def yacc(method=default_lr, debug=yaccdebug, module=None, tabmodule=tab_module, 
                 raise YaccError, "Unknown parsing method '%s'" % method
 
             if write_tables:
-                lr_write_tables(tabmodule)        
+                lr_write_tables(tabmodule,outputdir)
     
             if yaccdebug:
                 try:
-                    f = open(os.path.join(os.path.dirname(__file__),debugfile),"w")
+                    f = open(os.path.join(outputdir,debugfile),"w")
                     f.write(_vfc.getvalue())
                     f.write("\n\n")
                     f.write(_vf.getvalue())

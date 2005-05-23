@@ -25,6 +25,7 @@ symbol; each function generates a Node object of the appropriate subclass, as
 defined in ir.py.  Finally, it uses yacc to generate the parser.
 """
 
+import os.path
 from lexer import *
 import yacc
 import ir
@@ -316,6 +317,7 @@ structure_field
 
 build_productions()
 
-yacc.yacc(method='LALR', debug=True, tabmodule='ytab', debugfile='y.output')
+yacc.yacc(method='LALR', debug=True, tabmodule='ytab', debugfile='y.output',
+          outputdir=os.path.dirname(__file__))
 parse = yacc.parse
 
