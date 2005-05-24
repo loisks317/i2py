@@ -283,7 +283,7 @@ primary_expression
 	| constant
 	| LPAREN expression RPAREN
 	| LBRACKET expression_list RBRACKET
-	| LBRACE structure_field_list RBRACE
+	| LBRACE structure_body RBRACE
 
 constant
 	: NUMBER
@@ -305,13 +305,17 @@ expression_list
 	: expression
 	| expression_list COMMA expression
 
+structure_body
+	: structure_field_list
+	| IDENTIFIER COMMA structure_field_list
+	| IDENTIFIER
+
 structure_field_list
 	: structure_field
 	| structure_field_list COMMA structure_field
 
 structure_field
-	: expression
-	| IDENTIFIER COLON expression
+	: IDENTIFIER COLON expression
 	| INHERITS IDENTIFIER
 '''
 

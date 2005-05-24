@@ -44,8 +44,7 @@ class mapping_error(Error):
    pass
 
 def error_occurred():
-   if _errors:  return True
-   return False
+   return bool(_errors)
 
 def get_error_list():
    return _errors
