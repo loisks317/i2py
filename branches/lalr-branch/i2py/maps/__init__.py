@@ -19,19 +19,8 @@
 #
 
 import fmap
-from builtins import builtins
 
-subroutines = {}.fromkeys(builtins)
-
-def add_sub(name):
-   name = name.upper()
-   if name not in subroutines:
-      subroutines[name] = None
-
-def del_sub(name):
-   name = name.upper()
-   if name in subroutines:
-      del subroutines[name]
+subroutines = {}
 
 def map_proc(name, pyname=None, inpars=(), outpars=(), noptional=0,
              inkeys=(), outkeys=(), callfunc=None, extracode=None):
