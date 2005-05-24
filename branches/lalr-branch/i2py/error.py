@@ -23,6 +23,9 @@ This file defines error-handling classes and functions that are used throughout
 the package.
 """
 
+class InternalError(Exception):
+   pass
+
 class Error(object):
    def __init__(self, msg, lineno):
       global _errors

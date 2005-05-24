@@ -48,7 +48,7 @@ def build_productions():
       else:
 	 cls = getattr(ir, classname)
          if (not isinstance(cls, type)) or (not issubclass(cls, ir.Node)):
-	    raise ir.InternalError('object %s is not a Node' % classname)
+	    raise error.InternalError('object %s is not a Node' % classname)
 
       funcdoc = rule.replace('\n\t', ' ', 1)
       funcdefs.append('def %s(p):\n   \'\'\'%s\'\'\'\n   p[0] = ir.%s(p)\n' %

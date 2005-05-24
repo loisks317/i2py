@@ -30,35 +30,12 @@ parser.py.
 import yacc
 import maps
 import error
+from util import indent, pycode, pyindent, pycomment
 
 
 #
 # Utility classes and functions
 #
-
-class InternalError(Exception):
-   pass
-
-def pycode(obj):
-   if hasattr(obj, 'pycode'):
-      return obj.pycode()
-   return str(obj)
-
-idltab = '   '
-pytab  = '   '
-
-def indent(obj, ntabs=1, tab=None):
-   if not tab:  tab = idltab
-   pad = ntabs * tab
-   return pad + str(obj).replace('\n', '\n' + pad).rstrip(tab)
-
-def pyindent(obj, ntabs=1, tab=None):
-   if not tab:  tab = pytab
-   pad = ntabs * tab
-   return pad + pycode(obj).replace('\n', '\n' + pad).rstrip(tab)
-
-def pycomment(obj):
-   return pyindent(obj, tab='# ')
 
 def reduce_expression(expr):
    # Try to reduce a constant expression
@@ -69,7 +46,8 @@ def reduce_expression(expr):
 
 def find_nodes(root, nodetype=None):
    if not isinstance(root, Node):
-      raise InternalError('expecting Node, got ' + root.__class__.__name__)
+      raise error.InternalError('expecting Node, got ' +
+                                root.__class__.__name__)
 
    nodes = []
 
@@ -95,8 +73,8 @@ class Leaf(object):
 class Node(object):
    def __init__(self, prod):
       if not isinstance(prod, yacc.YaccProduction):
-         raise InternalError('expecting YaccProduction, got ' +
-	                     prod.__class__.__name__)
+         raise error.InternalError('expecting YaccProduction, got ' +
+	                           prod.__class__.__name__)
 
       self.lineno = prod.lineno(0)
       self.child_list = list(prod)[1:]
@@ -203,6 +181,26 @@ class SubroutineDefinition(Node):
    def __str__(self):
       return '%s %s' % tuple(self)
    def pycode(self):
+      global _in_pro, _in_function
+
+      if self.PRO:
+         _in_pro = True
+      else:
+         _in_function = True
+
+      s = 'def %s(' % pycode(self.subroutine_body.IDENTIFIER)
+
+      plist = self.subroutine_body.parameter_list
+      if plist:
+         s += pycode(plist)
+
+      s += ')\n%s\n' % pyindent(self.subroutine_body.statement_list)
+
+      _in_pro = False
+      _in_function = False
+
+      return s
+   def oldpycode(self):
       global _in_pro, _in_function
 
       if self.PRO:
@@ -483,6 +481,12 @@ class ProcedureCall(Node):
       return '%s, %s' % (self.IDENTIFIER, self.argument_list)
    def pycode(self):
       if self.argument_list:
+         args = pycode(self.argument_list)
+      else:
+         args = ''
+      return '%s(%s)' % (pycode(self.IDENTIFIER), args)
+   def oldpycode(self):
+      if self.argument_list:
          pars, keys = self.argument_list.get_pars_and_keys()
       else:
          pars = []
@@ -553,9 +557,20 @@ class AssignmentStatement(_SpacedExpression):
 
 class IncrementStatement(Node):
    def pycode(self):
-      # FIXME: implement this!
-      error.conversion_error("can't handle ++,-- yet", self.lineno)
-      return ''
+      if self.PLUSPLUS:
+         op = '+'
+      else:
+         op = '-'
+      return '%s %s= 1' % (pycode(self.pointer_expression), op)
+
+class Expression(Node):
+   def pycode(self):
+      if self.assignment_statement:
+         # FIXME: implement this!
+         error.conversion_error("can't handle assignment in expressions yet",
+	                        self.lineno)
+         return ''
+      return Node.pycode(self)
 
 class ConditionalExpression(_SpacedExpression):
    def pycode(self):
@@ -651,6 +666,15 @@ class ExponentiativeExpression(_SpacedExpression):
       return '%s ** %s' % (pycode(self.exponentiative_expression),
                            pycode(self.unary_expression))
 
+class UnaryExpression(Node):
+   def pycode(self):
+      if self.increment_statement:
+         # FIXME: implement this!
+         error.conversion_error("can't handle ++,-- in expressions yet",
+	                        self.lineno)
+         return ''
+      return Node.pycode(self)
+
 class PointerExpression(Node):
    def pycode(self):
       if self.TIMES:
@@ -670,6 +694,15 @@ class PostfixExpression(Node):
       if not self.IDENTIFIER:
          return Node.pycode(self)
 
+      if self.argument_list:
+         args = pycode(self.argument_list)
+      else:
+         args = ''
+      return '%s(%s)' % (pycode(self.IDENTIFIER), args)
+
+      #
+      # BEGIN OLD STUFF
+      #
       if self.argument_list:
          pars, keys = self.argument_list.get_pars_and_keys()
       else:
@@ -717,6 +750,15 @@ class Subscript(Node):
 
 class ExpressionList(_CommaSeparatedList):
    pass
+
+class StructureBody(Node):
+   def __str__(self):
+      if self.IDENTIFIER:
+	 s = str(self.IDENTIFIER)
+	 if self.COMMA:
+	    s += ', %s' % self.structure_field_list
+         return s
+      return Node.__str__(self)
 
 class StructureFieldList(_CommaSeparatedList):
    pass

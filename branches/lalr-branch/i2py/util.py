@@ -18,9 +18,24 @@
 #  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-from fmap import map_proc, map_func
+idltab = '   '
+pytab  = '   '
 
-map_func('N_PARAMS', callfunc=(lambda i,o: 'n_params'))
-map_func('KEYWORD_SET', pars=[1],
-         callfunc=(lambda i,o: '(%s is not None)' % i[0]))
+def indent(obj, ntabs=1, tab=None):
+   if not tab:  tab = idltab
+   pad = ntabs * tab
+   return pad + str(obj).replace('\n', '\n' + pad).rstrip(tab)
+
+def pycode(obj):
+   if hasattr(obj, 'pycode'):
+      return obj.pycode()
+   return str(obj)
+
+def pyindent(obj, ntabs=1, tab=None):
+   if not tab:  tab = pytab
+   pad = ntabs * tab
+   return pad + pycode(obj).replace('\n', '\n' + pad).rstrip(tab)
+
+def pycomment(obj):
+   return pyindent(obj, tab='# ')
 

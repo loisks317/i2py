@@ -23,7 +23,8 @@ This code handles the mapping of IDL functions to Python ones.  It's a nasty
 mess that needs to be cleaned up!
 """
 
-_extra_code = []
+_subroutines = {}
+_extra_code  = []
 
 
 class Error(Exception):
@@ -203,4 +204,20 @@ class SubroutineMapping(object):
 
       return '%s%s(%s)' % (output, self.pyname, input)
 
+
+
+def map_proc(name, pyname=None, inpars=(), outpars=(), noptional=0,
+             inkeys=(), outkeys=(), callfunc=None, extracode=None):
+   map = SubroutineMapping(name, pyname=pyname, function=False,
+                           inpars=inpars, outpars=outpars, noptional=noptional,
+                           inkeys=inkeys, outkeys=outkeys, callfunc=callfunc,
+			   extracode=extracode)
+   _subroutines[map.name] = map
+
+def map_func(name, pyname=None, pars=(), noptional=0, keys=(), callfunc=None,
+             extracode=None):
+   map = SubroutineMapping(name, pyname=pyname, function=True, inpars=pars,
+                           noptional=noptional, inkeys=keys, callfunc=callfunc,
+			   extracode=extracode)
+   _subroutines[map.name] = map
 
