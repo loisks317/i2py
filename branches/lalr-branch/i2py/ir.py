@@ -141,6 +141,14 @@ class Newline(Leaf):
          lines.append(l)
       return '\n'.join(lines)
 
+   def asdocstring(self):
+      doc = self.pycode().strip()
+      if doc and (doc[:2] == '#+') and (doc[len(doc)-2:] == '#-'):
+	 doc = '\n'.join([ l.replace('#', '', 1)
+	                   for l in doc.split('\n') ][1:-1])
+	 return '"""\n%s\n"""' % doc
+      return ''
+
 class Name(Leaf):
    def __init__(self, raw):
       self.raw = raw
@@ -197,12 +205,21 @@ class Number(Leaf):
 class TranslationUnit(Node):
    def pycode(self):
       parts = [pycode(self[-1])]
-      if len(self) > 1:
-         parts[0] = pycode(self[0]) + parts[0]
+
       ec = fmap.get_extra_code()
       if ec:
          parts.append(ec)
+
       parts.append('from numarray import *')
+
+      nl = self.NEWLINE
+      if nl:
+         doc = nl.asdocstring()
+	 if doc:
+	    parts.append(doc)
+	 else:
+            parts[0] = pycode(nl) + parts[0]
+
       parts.reverse()
       return '\n\n'.join(parts)
 
@@ -249,23 +266,31 @@ class SubroutineDefinition(Node):
 	    map = fmap.map_func(name, pars=inpars, keys=inkeys)
 
       try:
-         s = map.pydef(pars, keys)
+         header, body = map.pydef(pars, keys)
       except fmap.Error, e:
          error.mapping_error(str(e), self.lineno)
-	 s = ''
+	 header, body = '', ''
 
-      s += pyindent(self.subroutine_body.statement_list) + '\n'
+      body += '\n' + pycode(self.subroutine_body.statement_list) + '\n'
 
       if self.PRO:
          last = find_nodes(self.subroutine_body.statement_list, Statement)[-1]
          jump = find_nodes(last, JumpStatement)
          if (not jump) or (not jump[0].RETURN):
-            s += pyindent('return _ret()') + '\n'
+            body += 'return _ret()\n'
 
       _in_pro = False
       _in_function = False
 
-      return s
+      nl = self.subroutine_body.NEWLINE[0]
+      doc = nl.asdocstring()
+      if doc:
+         nl = '\n' + pyindent(doc) + '\n\n'
+      else:
+         nl = pycode(nl)
+
+      return (header + nl + pyindent(body) +
+              pycode(self.subroutine_body.NEWLINE[1]))
 
 class SubroutineBody(Node):
    def __str__(self):

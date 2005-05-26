@@ -126,7 +126,7 @@ class SubroutineMapping(object):
             body += '\n%s = %s' % (k[1], k[0])
 
       # If this is a function defintion, we don't need to create a _ret()
-      if self.function:  return '\n'.join([header, pyindent(body)]) + '\n'
+      if self.function:  return (header, body + '\n')
 
       body += '\ndef _ret():'
       if (not out) and (not out_keys):
@@ -146,9 +146,9 @@ class SubroutineMapping(object):
 	 retbody += '\nreturn tuple(_rv)'
 	 body += '\n' + pyindent(retbody)
          
-      body += '\n\n'
+      body += '\n'
 
-      return '\n'.join([header, pyindent(body)])
+      return (header, body)
 
    def pycall(self, pars=(), keys=()):
       pars = tuple(pars)
@@ -231,5 +231,5 @@ def add_extra_code(code):
    _extra_code.append(code)
 
 def get_extra_code():
-   return '\n'.join(_extra_code)
+   return '\n\n'.join([ c.strip() for c in _extra_code ])
 
