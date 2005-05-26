@@ -227,6 +227,9 @@ def map_func(name, pyname=None, pars=(), noptional=0, keys=(), callfunc=None,
 def get_map(name):
    return _subroutines.get(name)
 
+def add_extra_code(code):
+   _extra_code.append(code)
+
 def get_extra_code():
    return '\n'.join(_extra_code)
 

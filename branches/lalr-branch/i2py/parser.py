@@ -31,6 +31,11 @@ import yacc
 import ir
 import error
 
+try:
+   set
+except NameError:
+   from sets import Set as set  # Python 2.3
+
 def p_error(p):
    error.syntax_error('invalid syntax at %s' % repr(str(p.value)), p.lineno)
 
@@ -39,22 +44,22 @@ def build_productions():
    classdefs = []
 
    for rule in productions.strip().split('\n\n'):
-      rulename = rule.split()[0]
+      symbols = [ s for s in rule.split() if (s != ':') and (s != '|') ]
+      rulename = symbols[0]
       funcname = 'p_' + rulename
       classname = ''.join([ s.capitalize() for s in rulename.split('_') ])
 
       if not hasattr(ir, classname):
-         classdefs.append('class %s(Node):  pass\n' % classname) 
-      else:
-	 cls = getattr(ir, classname)
-         if (not isinstance(cls, type)) or (not issubclass(cls, ir.Node)):
-	    raise error.InternalError('object %s is not a Node' % classname)
+         exec ('class %s(Node):  pass\n' % classname) in ir.__dict__
+      cls = getattr(ir, classname)
+      if (not isinstance(cls, type)) or (not issubclass(cls, ir.Node)):
+         raise error.InternalError('object %s is not a Node' % classname)
+      cls._symbols = set(symbols)
 
       funcdoc = rule.replace('\n\t', ' ', 1)
       funcdefs.append('def %s(p):\n   \'\'\'%s\'\'\'\n   p[0] = ir.%s(p)\n' %
                       (funcname, funcdoc, classname))
 
-   if classdefs:  exec ''.join(classdefs) in ir.__dict__
    exec ''.join(funcdefs) in globals()
 
 precedence = (

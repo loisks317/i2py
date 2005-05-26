@@ -71,6 +71,8 @@ class Leaf(object):
    pass
 
 class Node(object):
+   _symbols = ()
+
    def __init__(self, prod):
       if not isinstance(prod, yacc.YaccProduction):
          raise error.InternalError('expecting YaccProduction, got ' +
@@ -89,9 +91,12 @@ class Node(object):
 	    else:
 	       self.child_dict[item.type] = ([self.child_dict[item.type],
 	                                      item.value])
+      for symbol in self._symbols:
+         if symbol not in self.child_dict:
+	    self.child_dict[symbol] = None
 
    def __getattr__(self, name):
-      return self.child_dict.get(name)
+      return self.child_dict[name]
 
    def __getitem__(self, index):
       return self.child_list[index]
@@ -324,7 +329,7 @@ class SelectionStatementBody(Node):
       s = ' %s OF\n%s' % (self.expression,
                           indent(self.selection_clause_list))
       if self.ELSE:
-         s += '   ELSE %s' % self.selection_clause
+         s += indent('ELSE %s' % self.selection_clause)
       return s
 
 class SelectionClauseList(Node):
@@ -375,7 +380,7 @@ class ForIndex(Node):
    def __str__(self):
       s = '%s = %s, %s' % (self.IDENTIFIER, self.expression[0],
                            self.expression[1])
-      if len(self) == 7:
+      if len(self.expression) == 3:
          s += ', %s' % self.expression[2]
       return s
    def pycode(self):
@@ -527,7 +532,7 @@ class AssignmentStatement(_SpacedExpression):
 
       op = self.assignment_operator.OP_EQUALS
       lvalue = pycode(self.pointer_expression)
-      rvalue = pycode(self.assignment_expression)
+      rvalue = pycode(self.expression)
 
       if op == '#=':
          return (('%s = transpose(matrixmultiply(transpose(%s), ' +
