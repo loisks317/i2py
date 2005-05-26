@@ -33,7 +33,7 @@ map_func('KEYWORD_SET', pars=[1],
 
 map_proc('ON_ERROR', inpars=[1],
          callfunc=(lambda i,o: '# ON_ERROR, %s' % i[0]))
-map_proc('PRINT', inpars=range(1,101), noptional=99,
+map_proc('PRINT', inpars=range(1,101), noptional=99, inkeys=['FORMAT'],
          callfunc=(lambda i,o: 'print ' + ', '.join(i)))
 
 def arrgen(typename):

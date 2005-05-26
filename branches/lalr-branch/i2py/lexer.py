@@ -163,7 +163,7 @@ def t_error(t):
 
 t_ignore = ' \t'
 
-lex.lex()
+lexer = lex.lex()
 
 if __name__ == '__main__':
    lex.runmain()

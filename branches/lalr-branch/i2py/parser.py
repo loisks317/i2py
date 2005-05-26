@@ -44,7 +44,7 @@ def build_productions():
    classdefs = []
 
    for rule in productions.strip().split('\n\n'):
-      symbols = [ s for s in rule.split() if (s != ':') and (s != '|') ]
+      symbols = [ s for s in rule.split() if s not in (':', '|', '%prec') ]
       rulename = symbols[0]
       funcname = 'p_' + rulename
       classname = ''.join([ s.capitalize() for s in rulename.split('_') ])
@@ -63,8 +63,8 @@ def build_productions():
    exec ''.join(funcdefs) in globals()
 
 precedence = (
-   ('nonassoc', 'LOWER_THAN_ELSE', 'LOWER_THAN_EQUALS'),
-   ('nonassoc', 'ELSE', 'EQUALS'),
+   ('nonassoc', 'LOWER_THAN_ELSE', 'LOWER_THAN_KEYWORD'),
+   ('nonassoc', 'ELSE', 'KEYWORD'),
 )
 
 productions = '''
@@ -197,8 +197,8 @@ argument_list
 	| argument_list COMMA argument
 
 argument
-	: expression %prec LOWER_THAN_EQUALS
-	| IDENTIFIER EQUALS expression
+	: expression %prec LOWER_THAN_KEYWORD
+	| IDENTIFIER EQUALS expression %prec KEYWORD
 	| DIVIDE IDENTIFIER
 	| EXTRA EQUALS IDENTIFIER
 
@@ -326,7 +326,10 @@ structure_field
 
 build_productions()
 
-yacc.yacc(method='LALR', debug=True, tabmodule='ytab', debugfile='y.output',
-          outputdir=os.path.dirname(__file__))
-parse = yacc.parse
+parser = yacc.yacc(method='LALR', debug=True, tabmodule='ytab',
+                   debugfile='y.output', outputdir=os.path.dirname(__file__))
+
+def parse(*pars, **keys):
+   lexer.lineno = 1
+   return parser.parse(*pars, **keys)
 

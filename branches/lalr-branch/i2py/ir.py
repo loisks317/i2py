@@ -228,7 +228,7 @@ class SubroutineDefinition(Node):
          error.mapping_error(str(e), self.lineno)
 	 s = ''
 
-      s += pyindent(self.subroutine_body.statement_list)
+      s += pyindent(self.subroutine_body.statement_list) + '\n'
 
       _in_pro = False
       _in_function = False
@@ -268,7 +268,7 @@ class IfStatement(Node):
       s = 'if %s:\n%s' % (pycode(self.expression),
                           pyindent(self.if_clause).rstrip('\n'))
       if self.else_clause:
-         s += '\nelse:\n%s' % pyindent(self.else_clause)
+         s += '\nelse:\n%s' % pyindent(self.else_clause).rstrip('\n')
       return s
 
 class _IfOrElseClause(Node):
@@ -432,7 +432,8 @@ class SimpleStatement(Node):
 	 if (not _in_pro) and (not _in_function):
             error.syntax_error('COMMON outside of PRO or FUNCTION', self.lineno)
 	    return ''
-         return 'global ' + pycode(self.identifier_list)
+         return 'global ' + ', '.join([ pycode(id) for id in
+	                                self.identifier_list.get_items()[1:] ])
       if len(self) == 1:
          return Node.pycode(self)
       return pycomment(str(self))
@@ -446,6 +447,13 @@ class _CommaSeparatedList(Node):
       if len(self) == 1:
          return pycode(self[0])
       return '%s, %s' % (pycode(self[0]), pycode(self[2]))
+   def get_items(self):
+      if len(self) == 1:
+         items = [self[0]]
+      else:
+         items = self[0].get_items()
+	 items.append(self[2])
+      return items
 
 class IdentifierList(_CommaSeparatedList):
    pass

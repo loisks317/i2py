@@ -73,7 +73,7 @@ def process_file(input):
       if debug:
          prog = str(prog).rstrip('\n')
       else:
-         prog = prog.pycode().rstrip('\n')
+         prog = prog.pycode().rstrip('\n') + '\n'
 
    if error_occurred():
       for e in get_error_list():
