@@ -94,6 +94,7 @@ parameter
 	: IDENTIFIER
 	| IDENTIFIER EQUALS IDENTIFIER
 	| EXTRA EQUALS IDENTIFIER
+	| EXTRA EQUALS EXTRA
 
 statement_list
 	: statement NEWLINE
@@ -201,6 +202,7 @@ argument
 	| IDENTIFIER EQUALS expression %prec KEYWORD
 	| DIVIDE IDENTIFIER
 	| EXTRA EQUALS IDENTIFIER
+	| EXTRA EQUALS EXTRA
 
 assignment_statement
 	: pointer_expression assignment_operator expression

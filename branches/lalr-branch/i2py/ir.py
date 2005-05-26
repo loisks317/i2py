@@ -115,6 +115,32 @@ class Node(object):
 # Terminal symbols
 #
 
+class Newline(Leaf):
+   def __init__(self, raw):
+      self.lines = []
+      for l in raw.split('\n'):
+	 if l.strip() == '':
+	    l = ''
+	 else:
+	    if l[:1] == '&':
+	       l = ' ' + l
+	    if l[len(l) - 1] == '&':
+	       l = l + ' '
+         self.lines.append(l)
+
+   def __str__(self):
+      return '\n'.join(self.lines)
+
+   def pycode(self):
+      lines = []
+      for l in self.lines:
+	 if l.strip()[:1] == ';':
+	    l = l.replace(';', '#', 1)
+	 else:
+	    l = l.replace('&', ';')
+         lines.append(l)
+      return '\n'.join(lines)
+
 class Name(Leaf):
    def __init__(self, raw):
       self.raw = raw
@@ -169,10 +195,10 @@ class Number(Leaf):
 #
 
 class TranslationUnit(Node):
-   def __str__(self):
-      return str(self[-1])
    def pycode(self):
       parts = [pycode(self[-1])]
+      if len(self) > 1:
+         parts[0] = pycode(self[0]) + parts[0]
       ec = fmap.get_extra_code()
       if ec:
          parts.append(ec)
@@ -230,6 +256,12 @@ class SubroutineDefinition(Node):
 
       s += pyindent(self.subroutine_body.statement_list) + '\n'
 
+      if self.PRO:
+         last = find_nodes(self.subroutine_body.statement_list, Statement)[-1]
+         jump = find_nodes(last, JumpStatement)
+         if (not jump) or (not jump[0].RETURN):
+            s += pyindent('return _ret()') + '\n'
+
       _in_pro = False
       _in_function = False
 
@@ -241,8 +273,8 @@ class SubroutineBody(Node):
          params = str(self.parameter_list)
       else:
          params = ''
-      return '%s%s\n%sEND\n' % (self.IDENTIFIER, params,
-                                indent(self.statement_list))
+      return '%s%s%s%sEND%s' % (self.IDENTIFIER, params, self.NEWLINE[0],
+                                indent(self.statement_list), self.NEWLINE[1])
 
 class ParameterList(Node):
    def __str__(self):
@@ -254,9 +286,16 @@ class ParameterList(Node):
 
 class LabeledStatement(Node):
    def __str__(self):
+      if self.NEWLINE:
+         return '%s:%s%s' % (self.IDENTIFIER, self.NEWLINE, self.statement)
       return '%s: %s' % (self.IDENTIFIER, self.statement)
    def pycode(self):
-      return '%s:\n%s' % (pycomment(self.expression), pycode(self.statement))
+      if self.NEWLINE:
+         nl = pycode(self.NEWLINE)
+      else:
+         nl = '\n'
+      return '%s:%s%s' % (pycomment(self.IDENTIFIER), nl,
+                          pycode(self.statement))
 
 class IfStatement(Node):
    def __str__(self):
@@ -265,28 +304,30 @@ class IfStatement(Node):
          s += ' ELSE %s' % self.else_clause
       return s
    def pycode(self):
-      s = 'if %s:\n%s' % (pycode(self.expression),
+      s = 'if %s:%s' % (pycode(self.expression),
                           pyindent(self.if_clause).rstrip('\n'))
       if self.else_clause:
-         s += '\nelse:\n%s' % pyindent(self.else_clause).rstrip('\n')
+         s += '\nelse:%s' % pyindent(self.else_clause).rstrip('\n')
       return s
 
 class _IfOrElseClause(Node):
    def __str__(self):
       if not self.BEGIN:
          return str(self.statement)
-      return 'BEGIN\n%s%s' % (indent(self.statement_list), self[-1])
+      return 'BEGIN%s%s%s' % (self.NEWLINE, indent(self.statement_list),
+                              self[-1])
    def pycode(self):
       if not self.BEGIN:
-         return pycode(self.statement)
-      return pycode(self.statement_list)
+         return '\n' + pycode(self.statement)
+      return pycode(self.NEWLINE) + pycode(self.statement_list)
+
 class IfClause(_IfOrElseClause):  pass
 class ElseClause(_IfOrElseClause):  pass
 
 class SelectionStatement(Node):
    def pycode(self):
       body = self.selection_statement_body
-      s = '_expr = %s\n' % pycode(body.expression)
+      s = '_expr = %s%s' % (pycode(body.expression), pycode(body.NEWLINE))
 
       if self.CASE:
          is_switch = False
@@ -304,29 +345,29 @@ class SelectionStatement(Node):
 	 if (not first) and is_switch:
 	    test = '_match or (%s)' % test
 
-         s += '%s %s:\n%s' % (key, test, pyindent(a))
+         s += '%s %s:%s' % (key, test, pyindent(a))
 
 	 if is_switch:
-	    s += '\n%s' % pyindent('_match = True')
+	    s += '%s\n' % pyindent('_match = True')
 
          if first:
 	    if is_switch:
-	       key = '\nif'
+	       key = 'if'
 	    else:
-	       key = '\nelif'
+	       key = 'elif'
 	    first = False
 
       if body.ELSE:
-         s += '\nelse:\n%s' % pyindent(body.selection_clause)
+         s += 'else:%s' % pyindent(body.selection_clause)
       elif not is_switch:
-         s += '\nelse:\n%s' % pyindent("raise RuntimeError('no match found " +
+         s += 'else:\n%s' % pyindent("raise RuntimeError('no match found " +
 	                               "for expression')")
 
       return s
 
 class SelectionStatementBody(Node):
    def __str__(self):
-      s = ' %s OF\n%s' % (self.expression,
+      s = ' %s OF%s%s' % (self.expression, self.NEWLINE,
                           indent(self.selection_clause_list))
       if self.ELSE:
          s += indent('ELSE %s' % self.selection_clause)
@@ -348,32 +389,40 @@ class SelectionClauseList(Node):
 class SelectionClause(Node):
    def __str__(self):
       if self.BEGIN:
-         stmt = ' BEGIN\n%s   END' % indent(self.statement_list, 2)
-      elif self.statement:
-         stmt = ' %s' % self.statement
+         nl = self.NEWLINE[1]
+         stmt = ' BEGIN%s%s   END' % (self.NEWLINE[0],
+	                              indent(self.statement_list, 2))
       else:
-         stmt = ''
-      return ':%s\n' % stmt
+	 nl = self.NEWLINE
+         if self.statement:
+            stmt = ' %s' % self.statement
+         else:
+            stmt = ''
+      return ':%s%s' % (stmt, nl)
    def pycode(self):
       if self.statement_list:
-         return pycode(self.statement_list).rstrip('\n')
+         return '%s%s%s' % (pycode(self.NEWLINE[0]),
+	                    pycode(self.statement_list).rstrip('\n'),
+			    pycode(self.NEWLINE[1]))
       if self.statement:
-         return pycode(self.statement)
-      return 'pass'
+         return '\n' + pycode(self.statement) + pycode(self.NEWLINE)
+      return '\npass' + pycode(self.NEWLINE)
 
 class ForStatement(Node):
    def __str__(self):
       if self.BEGIN:
-         stmt = 'BEGIN\n%sENDFOR' % indent(self.statement_list)
+         stmt = 'BEGIN%s%sENDFOR' % (self.NEWLINE, indent(self.statement_list))
       else:
          stmt = str(self.statement)
       return 'FOR %s DO %s' % (self.for_index, stmt)
    def pycode(self):
       if self.statement:
          body = self.statement
+	 nl = '\n'
       else:
          body = self.statement_list
-      return 'for %s:\n%s' % (pycode(self.for_index),
+	 nl = pycode(self.NEWLINE)
+      return 'for %s:%s%s' % (pycode(self.for_index), nl,
                               pyindent(body).rstrip('\n'))
 
 class ForIndex(Node):
@@ -394,31 +443,36 @@ class ForIndex(Node):
 class WhileStatement(Node):
    def __str__(self):
       if self.BEGIN:
-         stmt = 'BEGIN\n%sENDWHILE' % indent(self.statement_list)
+         stmt = 'BEGIN%s%sENDWHILE' % (self.NEWLINE,
+	                               indent(self.statement_list))
       else:
          stmt = str(self.statement)
       return 'WHILE %s DO %s' % (self.expression, stmt)
    def pycode(self):
       if self.statement:
          body = self.statement
+	 nl = '\n'
       else:
          body = self.statement_list
-      return 'while %s:\n%s' % (pycode(self.expression),
+	 nl = pycode(self.NEWLINE)
+      return 'while %s:%s%s' % (pycode(self.expression), nl,
                                 pyindent(body).rstrip('\n'))
 
 class RepeatStatement(Node):
    def __str__(self):
       if self.BEGIN:
-         stmt = 'BEGIN\n%sENDREP' % indent(self.statement_list)
+         stmt = 'BEGIN%s%sENDREP' % (self.NEWLINE, indent(self.statement_list))
       else:
          stmt = str(self.statement)
       return 'REPEAT %s UNTIL %s' % (stmt, self.expression)
    def pycode(self):
       if self.statement:
          body = self.statement
+	 nl = '\n'
       else:
          body = self.statement_list
-      return 'while True:\n%s\n%s' % (pyindent(body).rstrip('\n'),
+	 nl = pycode(self.NEWLINE)
+      return 'while True:%s%s\n%s' % (nl, pyindent(body).rstrip('\n'),
 				      pyindent('if %s:  break' %
 				               pycode(self.expression)))
 
@@ -694,7 +748,7 @@ class PostfixExpression(Node):
 	                        self.lineno)
          return ''
 
-      if not self.IDENTIFIER:
+      if self.DOT or (not self.IDENTIFIER):
          return Node.pycode(self)
 
       if self.argument_list:

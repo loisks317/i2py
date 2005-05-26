@@ -152,16 +152,18 @@ def t_AMPAMP(t):
    return t
 
 def t_NEWLINE(t):
-   r'((((;.*)? \n) | &) [ \t]*)+'
+   r'([ \t]* (((;.*)? \n) | &) [ \t]*)+'
    t.lineno += t.value.count('\n')
-   t.value = '\n'
+   t.value = ir.Newline(t.value)
    return t
+
+def t_whitespace(t):
+   r'[ \t]+'
+   pass
 
 def t_error(t):
    error.syntax_error('illegal character: %s' % repr(t.value[0]), t.lineno)
    t.skip(1)
-
-t_ignore = ' \t'
 
 lexer = lex.lex()
 

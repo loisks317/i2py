@@ -141,12 +141,12 @@ class SubroutineMapping(object):
 	    retbody = '_rv = [%s]\n_rv += ' % ', '.join(out)
 	 else:
 	    retbody = '_rv = '
-	 retbody += ('[k[1] for k in zip(_outkeys,[%s]) if k[0] is not None]' %
-	             ','.join([ k[1] for k in out_keys ]))
+	 retbody += ('[_k[1] for _k in zip(_outkeys,[%s]) if _k[0] is not None]'
+	             % ','.join([ k[1] for k in out_keys ]))
 	 retbody += '\nreturn tuple(_rv)'
 	 body += '\n' + pyindent(retbody)
          
-      body += '\n'
+      body += '\n\n'
 
       return '\n'.join([header, pyindent(body)])
 
