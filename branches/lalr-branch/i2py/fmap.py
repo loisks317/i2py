@@ -23,6 +23,8 @@ This code handles the mapping of IDL functions to Python ones.  It's a nasty
 mess that needs to be cleaned up!
 """
 
+from util import pyindent
+
 _subroutines = {}
 _extra_code  = []
 
@@ -90,64 +92,63 @@ class SubroutineMapping(object):
 	              "(defined with keywords %s)") %
 		     (self.name, keys_expected, keys_got))
 
-      fdef = 'def %s(' % self.pyname
+      if self.extracode:
+         if self.extracode not in _extra_code:
+	    _extra_code.append(self.extracode)
 
       nrequired = self.npars - self.noptional
       in_required = [ pars[i] for i in range(nrequired) if i+1 in self.inpars ]
       in_optional = ([ pars[i] for i in range(nrequired, self.npars)
                        if i+1 in self.inpars ])
-      out_keys = [ k for k in keys if k[0].upper() in self.outkeys ]
+      out_keys = [ k for k in keys if k[0].lower() in self.outkeys ]
+      params = ', '.join(in_required + [ p + '=None' for p in in_optional ] +
+			 [ k[0] + '=None' for k in keys ])
 
-      fdef += ', '.join(in_required + [ p + '=None' for p in in_optional ] +
-                        [ k[0] + '=None' for k in keys ])
+      header = 'def %s(%s):' % (self.pyname, params)
 
-      fdef += '):\n   n_params = %d' % self.npars
+      body = 'n_params = %d' % self.npars
       if in_optional:
-	 fdef += ' - [%s].count(None)' % ', '.join(in_optional)
-      fdef += '\n'
+	 body += ' - [%s].count(None)' % ', '.join(in_optional)
 
       if out_keys:
-         fdef += '   _outkeys = (%s' % ', '.join([ k[0] for k in out_keys ])
-         if len(out_keys) == 1:  fdef += ','
-	 fdef += ')\n'
+         body += '\n_outkeys = (%s' % ', '.join([ k[0] for k in out_keys ])
+         if len(out_keys) == 1:  body += ','
+	 body += ')'
 
       out = [ pars[i] for i in range(self.npars) if i+1 in self.outpars ]
       out_only = ([ pars[i] for i in range(self.npars) if (i+1 in self.outpars)
                     and (i+1 not in self.inpars) ])
       for par in out_only:
-         fdef += '   %s = None\n' % par
+         body += '\n%s = None' % par
 
       for k in keys:
          if k[0] != k[1]:
-            fdef += '   %s = %s\n' % (k[1], k[0])
+            body += '\n%s = %s' % (k[1], k[0])
 
       # If this is a function defintion, we don't need to create a _ret()
-      if self.function:  return fdef
+      if self.function:  return '\n'.join([header, pyindent(body)]) + '\n'
 
-      fdef += '   def _ret():'
+      body += '\ndef _ret():'
       if (not out) and (not out_keys):
-         fdef += '  return None'
+         body += '  return None'
       elif out and (not out_keys):
 	 if len(out) == 1:
-	    fdef += '  return %s' % out[0]
+	    body += '  return %s' % out[0]
 	 else:
-	    fdef += '  return (%s)' % ', '.join(out)
+	    body += '  return (%s)' % ', '.join(out)
       else:
 	 if out:
-	    fdef += '\n      retvals = [%s]\n      retvals += ' % ', '.join(out)
+	    retbody = '_rv = [%s]\n_rv += ' % ', '.join(out)
 	 else:
-	    fdef += '\n      retvals = '
-	 fdef += ('[k[1] for k in zip(_outkeys, [%s]) if k[0] is not None]\n' %
-	          ', '.join([ k[1] for k in out_keys ]))
-	 fdef += '      return tuple(retvals)'
+	    retbody = '_rv = '
+	 retbody += ('[k[1] for k in zip(_outkeys,[%s]) if k[0] is not None]' %
+	             ','.join([ k[1] for k in out_keys ]))
+	 retbody += '\nreturn tuple(_rv)'
+	 body += '\n' + pyindent(retbody)
          
-      fdef += '\n'
+      body += '\n'
 
-      if self.extracode:
-         if self.extracode not in _extra_code:
-	    _extra_code.append(self.extracode)
-
-      return fdef
+      return '\n'.join([header, pyindent(body)])
 
    def pycall(self, pars=(), keys=()):
       pars = tuple(pars)
@@ -213,6 +214,7 @@ def map_proc(name, pyname=None, inpars=(), outpars=(), noptional=0,
                            inkeys=inkeys, outkeys=outkeys, callfunc=callfunc,
 			   extracode=extracode)
    _subroutines[map.name] = map
+   return map
 
 def map_func(name, pyname=None, pars=(), noptional=0, keys=(), callfunc=None,
              extracode=None):
@@ -220,4 +222,11 @@ def map_func(name, pyname=None, pars=(), noptional=0, keys=(), callfunc=None,
                            noptional=noptional, inkeys=keys, callfunc=callfunc,
 			   extracode=extracode)
    _subroutines[map.name] = map
+   return map
+
+def get_map(name):
+   return _subroutines.get(name)
+
+def get_extra_code():
+   return '\n'.join(_extra_code)
 

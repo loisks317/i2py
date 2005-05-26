@@ -27,9 +27,9 @@ on in those methods, you need to refer to the grammar specification in
 parser.py.
 """
 
-import yacc
-import maps
 import error
+import yacc
+import fmap
 from util import indent, pycode, pyindent, pycomment
 
 
@@ -168,8 +168,9 @@ class TranslationUnit(Node):
       return str(self[-1])
    def pycode(self):
       parts = [pycode(self[-1])]
-      #if fmap.extra_code:
-      #   parts.append('\n'.join(fmap.extra_code))
+      ec = fmap.get_extra_code()
+      if ec:
+         parts.append(ec)
       parts.append('from numarray import *')
       parts.reverse()
       return '\n\n'.join(parts)
@@ -182,33 +183,6 @@ class SubroutineDefinition(Node):
       return '%s %s' % tuple(self)
    def pycode(self):
       global _in_pro, _in_function
-
-      if self.PRO:
-         _in_pro = True
-      else:
-         _in_function = True
-
-      s = 'def %s(' % pycode(self.subroutine_body.IDENTIFIER)
-
-      plist = self.subroutine_body.parameter_list
-      if plist:
-         s += pycode(plist)
-
-      s += ')\n%s\n' % pyindent(self.subroutine_body.statement_list)
-
-      _in_pro = False
-      _in_function = False
-
-      return s
-   def oldpycode(self):
-      global _in_pro, _in_function
-
-      if self.PRO:
-         _in_pro = True
-	 map = fmap.procedures[str(self.PRO_ID)]
-      else:
-         _in_function = True
-	 map = fmap.functions[str(self.FUNCTION_ID)]
 
       pars = []
       keys = []
@@ -224,6 +198,24 @@ class SubroutineDefinition(Node):
 	       keys.append((pycode(p.IDENTIFIER[0]), pycode(p.IDENTIFIER[1])))
 	    else:
 	       pars.append(pycode(p.IDENTIFIER))
+
+      name = str(self.subroutine_body.IDENTIFIER)
+      map = fmap.get_map(name)
+      if not map:
+         inpars  = range(1, len(pars)+1)
+	 outpars = inpars
+	 inkeys  = [ k[0] for k in keys ]
+	 outkeys = inkeys
+
+      if self.PRO:
+         _in_pro = True
+	 if not map:
+	    map = fmap.map_proc(name, inpars=inpars, outpars=outpars,
+	                        inkeys=inkeys, outkeys=outkeys)
+      else:
+         _in_function = True
+	 if not map:
+	    map = fmap.map_func(name, pars=inpars, keys=inkeys)
 
       try:
          s = map.pydef(pars, keys)
@@ -481,19 +473,20 @@ class ProcedureCall(Node):
       return '%s, %s' % (self.IDENTIFIER, self.argument_list)
    def pycode(self):
       if self.argument_list:
-         args = pycode(self.argument_list)
-      else:
-         args = ''
-      return '%s(%s)' % (pycode(self.IDENTIFIER), args)
-   def oldpycode(self):
-      if self.argument_list:
          pars, keys = self.argument_list.get_pars_and_keys()
       else:
          pars = []
          keys = []
 
+      name = str(self.IDENTIFIER)
+      map = fmap.get_map(name)
+
+      if not map:
+	 keys = [ '%s=%s' % (k[0], k[1]) for k in keys ]
+         return '%s(%s)' % (pycode(self.IDENTIFIER), ', '.join(pars + keys))
+
       try:
-         return fmap.procedures[str(self.PRO_ID)].pycall(pars, keys)
+         return map.pycall(pars, keys)
       except fmap.Error, e:
          error.mapping_error(str(e), self.lineno)
 	 return ''
@@ -510,13 +503,10 @@ class ArgumentList(_CommaSeparatedList):
 	    return ''
 	 if a.DIVIDE:
 	    keys.append((pycode(a.IDENTIFIER), 'True'))
+	 elif a.IDENTIFIER:
+	    keys.append((pycode(a.IDENTIFIER), pycode(a.expression)))
 	 else:
-	    ae = a.expression.assignment_expression
-	    if ae.assignment_operator:
-	       keys.append((pycode(ae.pointer_expression),
-		            pycode(ae.assignment_expression)))
-	    else:
-	       pars.append(pycode(a.expression))
+	    pars.append(pycode(a.expression))
 
       return (pars, keys)
 
@@ -695,22 +685,20 @@ class PostfixExpression(Node):
          return Node.pycode(self)
 
       if self.argument_list:
-         args = pycode(self.argument_list)
-      else:
-         args = ''
-      return '%s(%s)' % (pycode(self.IDENTIFIER), args)
-
-      #
-      # BEGIN OLD STUFF
-      #
-      if self.argument_list:
          pars, keys = self.argument_list.get_pars_and_keys()
       else:
          pars = []
          keys = []
 
+      name = str(self.IDENTIFIER)
+      map = fmap.get_map(name)
+
+      if not map:
+	 keys = [ '%s=%s' % (k[0], k[1]) for k in keys ]
+         return '%s(%s)' % (pycode(self.IDENTIFIER), ', '.join(pars + keys))
+
       try:
-         return fmap.functions[str(self.FUNCTION_ID)].pycall(pars, keys)
+         return map.pycall(pars, keys)
       except fmap.Error, e:
          error.mapping_error(str(e), self.lineno)
 	 return ''

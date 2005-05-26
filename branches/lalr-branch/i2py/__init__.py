@@ -20,7 +20,8 @@
 
 __version__ = '0.0.9'
 
+from error import error_occurred, get_error_list, clear_error_list
 from parser import parse
 from fmap import map_proc, map_func
-from error import error_occurred, get_error_list, clear_error_list
+import maps
 
