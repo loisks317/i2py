@@ -20,9 +20,9 @@
 
 
 """
-Defines classes representing the nodes and leaves of the abstract syntax tree.
-Each such class can produce IDL or Python code for itself via its __str__() or
-pycode() method, respectively.
+Defines classes representing the nodes and leaves of the abstract syntax tree
+(AST).  Each such class can produce IDL or Python code for itself via its
+__str__() or pycode() method, respectively.
 """
 
 
@@ -40,12 +40,12 @@ import map
 
 
 class Leaf(object):
-   "Base class for leaves of the abstract syntax tree (terminal symbols)"
+   "Base class for leaves of the AST (terminal symbols)"
    pass
 
 
 class Node(object):
-   "Base class for nodes of the abstract syntax tree (nonterminal symbols)"
+   "Base class for nodes of the AST (nonterminal symbols)"
 
    # Set of symbols that appear in the RHS of the grammar production for this
    # node
@@ -119,15 +119,14 @@ class Node(object):
 
    def __str__(self):
       """
-      Returns a string containing the IDL code for the abstract syntax tree
-      rooted at this node.
+      Returns a string containing the IDL code for the AST rooted at this node.
       """
       return ''.join([ str(child) for child in self ])
 
    def pycode(self):
       """
-      Returns a string containing the Python code for the abstract syntax tree
-      rooted at this node.
+      Returns a string containing the Python code for the AST rooted at this
+      node.
       """
       return ''.join([ pycode(child) for child in self ])
 
@@ -180,7 +179,7 @@ class Name(Leaf):
    def __str__(self):
       return self.raw.upper()
    def pycode(self):
-      vmap = map.get_variable_map(self.raw.upper())
+      vmap = map.get_variable_map(self.raw)
       if vmap:
          return vmap.pyvalue()
       s = self.raw.lower()

@@ -356,11 +356,12 @@ def build_productions():
 
 def parse(input, debug=False):
    """
-   Parses the given input string (which must contain IDL code) and returns the
-   resulting abstract syntax tree.  If debug is true, any syntax errors will
+   Parses the given input string (which must contain IDL code).  If the parsing
+   is successful, returns the root of the resulting abstract syntax tree;
+   otherwise, returns None.  If debug is true, any syntax errors will
    produce parser debugging output.
    """
-   lexer.lineno = 1
+   lexer.lineno = 1   # This needs to be reset manually (PLY bug?)
    return parser.parse(input, lexer, debug)
 
 

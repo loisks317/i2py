@@ -244,7 +244,7 @@ def map_func(name, pyname=None, pars=(), noptional=0, keys=(), callfunc=None,
    return map
 
 def get_subroutine_map(name):
-   return _subroutines.get(name)
+   return _subroutines.get(name.upper())
 
 # These are essential to the function mapping mechanism and can't be changed!
 map_func('N_PARAMS', callfunc=(lambda i,o: 'n_params'))
@@ -279,5 +279,5 @@ def map_var(name, pyname, extracode=None):
    return map
 
 def get_variable_map(name):
-   return _variables.get(name)
+   return _variables.get(name.upper())
 
