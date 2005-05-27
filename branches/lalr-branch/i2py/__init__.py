@@ -22,6 +22,6 @@ __version__ = '0.0.9'
 
 from error import error_occurred, get_error_list, clear_error_list
 from parser import parse
-from map import map_proc, map_func, map_var, add_extra_code
+from map import map_pro, map_func, map_var, add_extra_code
 import maplib
 

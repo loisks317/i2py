@@ -67,10 +67,10 @@ subroutine_definition
 
 subroutine_body
 	: IDENTIFIER NEWLINE statement_list END NEWLINE
-	| IDENTIFIER parameter_list NEWLINE statement_list END NEWLINE
+	| IDENTIFIER COMMA parameter_list NEWLINE statement_list END NEWLINE
 
 parameter_list
-	: COMMA parameter
+	: parameter
 	| parameter_list COMMA parameter
 
 parameter

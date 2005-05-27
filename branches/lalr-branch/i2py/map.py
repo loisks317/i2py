@@ -23,7 +23,7 @@ This code handles the mapping of IDL functions to Python ones.  It's a nasty
 mess that needs to be cleaned up!
 """
 
-from util import pyindent
+from util import *
 
 
 class Error(Exception):
@@ -226,8 +226,8 @@ class SubroutineMapping(object):
 
 
 
-def map_proc(name, pyname=None, inpars=(), outpars=(), noptional=0,
-             inkeys=(), outkeys=(), callfunc=None, extracode=None):
+def map_pro(name, pyname=None, inpars=(), outpars=(), noptional=0,
+            inkeys=(), outkeys=(), callfunc=None, extracode=None):
    map = SubroutineMapping(name, pyname=pyname, function=False,
                            inpars=inpars, outpars=outpars, noptional=noptional,
                            inkeys=inkeys, outkeys=outkeys, callfunc=callfunc,
@@ -245,6 +245,11 @@ def map_func(name, pyname=None, pars=(), noptional=0, keys=(), callfunc=None,
 
 def get_subroutine_map(name):
    return _subroutines.get(name)
+
+# These are essential to the function mapping mechanism and can't be changed!
+map_func('N_PARAMS', callfunc=(lambda i,o: 'n_params'))
+map_func('KEYWORD_SET', pars=[1],
+         callfunc=(lambda i,o: '(%s is not None)' % i[0]))
 
 
 #

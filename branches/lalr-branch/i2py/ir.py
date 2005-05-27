@@ -18,102 +18,126 @@
 #  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
+
 """
-The classes defined in this file provide abstract representations of the
-terminal and non-terminal symbols defined in the grammar.  Each such class has
-an __str__() method that generates IDL code for the given object and a pycode()
-method that produces the corresponding Python code.  To understand what's going
-on in those methods, you need to refer to the grammar specification in
-parser.py.
+Defines classes representing the nodes and leaves of the abstract syntax tree.
+Each such class can produce IDL or Python code for itself via its __str__() or
+pycode() method, respectively.
 """
+
 
 import error
+from util import *
 import yacc
 import map
-from util import indent, pycode, pyindent, pycomment
 
 
-#
-# Utility classes and functions
-#
-
-def reduce_expression(expr):
-   # Try to reduce a constant expression
-   try:
-      return str(eval(expr, {}))
-   except:
-      return expr
-
-def find_nodes(root, nodetype=None):
-   if not isinstance(root, Node):
-      raise error.InternalError('expecting Node, got ' +
-                                root.__class__.__name__)
-
-   nodes = []
-
-   for child in root:
-      if nodetype and isinstance(child, nodetype):
-         nodes.append(child)
-      elif isinstance(child, Node):
-         nodes += find_nodes(child, nodetype)
-      else:
-         # FIXME: throw an exception here?
-	 pass
-
-   return nodes
-
-
+################################################################################
 #
 # Abstract base classes
 #
+################################################################################
+
 
 class Leaf(object):
+   "Base class for leaves of the abstract syntax tree (terminal symbols)"
    pass
 
+
 class Node(object):
+   "Base class for nodes of the abstract syntax tree (nonterminal symbols)"
+
+   # Set of symbols that appear in the RHS of the grammar production for this
+   # node
    _symbols = ()
 
    def __init__(self, prod):
+      "Creates a new Node from prod (a yacc.YaccProduction instance)"
+
+      # Validate input (just a sanity check)
       if not isinstance(prod, yacc.YaccProduction):
          raise error.InternalError('expecting YaccProduction, got ' +
 	                           prod.__class__.__name__)
 
+      # Store line number and create child_list
       self.lineno = prod.lineno(0)
       self.child_list = list(prod)[1:]
 
+      #
+      # Create child_dict
+      #
+
       self.child_dict = {}
+
       for item in prod.slice[1:]:
 	 if item.type not in self.child_dict:
+	    # No entry for this symbol in child_dict, so make one
             self.child_dict[item.type] = item.value
 	 else:
+	    # There's already an entry for this symbol in child_dict, so the
+	    # entry's value must be a list
 	    if isinstance(self.child_dict[item.type], list):
+	       # Already a list, so append to it
 	       self.child_dict[item.type].append(item.value)
 	    else:
+	       # Make list from previous and current value
 	       self.child_dict[item.type] = ([self.child_dict[item.type],
 	                                      item.value])
+
+      # For each valid symbol that isn't involved in this instance, make an
+      # entry in child_dict with value None
       for symbol in self._symbols:
          if symbol not in self.child_dict:
 	    self.child_dict[symbol] = None
 
    def __getattr__(self, name):
+      """
+      Given a symbol name from the right-hand side of the grammar production
+      for this node, returns the corresponding child node.  If the production
+      includes multiple instances of the symbol, returns a list of their values
+      (ordered from left to right).  If the given symbol is not used in the
+      current instance, returns None.
+      """
       return self.child_dict[name]
 
    def __getitem__(self, index):
+      """
+      Returns the child node for the symbol at the corresponding position in
+      the right-hand side of the grammar production for this node.  Note that,
+      unlike __getattr__, this function only provides access to symbols
+      actually used in the current instance.
+      """
       return self.child_list[index]
 
    def __len__(self):
+      """
+      Returns the number of child nodes in the current instance.  This is
+      useful for distinguishing which branch of a grammar production applies to
+      the instance.
+      """
       return len(self.child_list)
 
    def __str__(self):
+      """
+      Returns a string containing the IDL code for the abstract syntax tree
+      rooted at this node.
+      """
       return ''.join([ str(child) for child in self ])
 
    def pycode(self):
+      """
+      Returns a string containing the Python code for the abstract syntax tree
+      rooted at this node.
+      """
       return ''.join([ pycode(child) for child in self ])
 
 
+################################################################################
 #
 # Terminal symbols
 #
+################################################################################
+
 
 class Newline(Leaf):
    def __init__(self, raw):
@@ -149,6 +173,7 @@ class Newline(Leaf):
 	 return '"""\n%s\n"""' % doc
       return ''
 
+
 class Name(Leaf):
    def __init__(self, raw):
       self.raw = raw
@@ -162,6 +187,7 @@ class Name(Leaf):
       if s[0] == '!':
          s = '_sys_' + s[1:]
       return s
+
 
 class Number(Leaf):
    def __init__(self, parts):
@@ -201,9 +227,12 @@ class Number(Leaf):
       return s
 
 
+################################################################################
 #
 # Nonterminal symbols
 #
+################################################################################
+
 
 class TranslationUnit(Node):
    def pycode(self):
@@ -226,6 +255,7 @@ class TranslationUnit(Node):
       parts.reverse()
       return '\n\n'.join(parts)
 
+
 _in_pro = False
 _in_function = False
 
@@ -240,7 +270,7 @@ class SubroutineDefinition(Node):
 
       plist = self.subroutine_body.parameter_list
       if plist:
-	 for p in find_nodes(plist, Parameter):
+	 for p in plist.get_items():
 	    if p.EXTRA:
 	       # FIXME: implement this!
 	       error.conversion_error("can't handle _EXTRA yet", self.lineno)
@@ -261,8 +291,8 @@ class SubroutineDefinition(Node):
       if self.PRO:
          _in_pro = True
 	 if not fmap:
-	    fmap = map.map_proc(name, inpars=inpars, outpars=outpars,
-	                        inkeys=inkeys, outkeys=outkeys)
+	    fmap = map.map_pro(name, inpars=inpars, outpars=outpars,
+	                       inkeys=inkeys, outkeys=outkeys)
       else:
          _in_function = True
 	 if not fmap:
@@ -277,8 +307,8 @@ class SubroutineDefinition(Node):
       body += '\n' + pycode(self.subroutine_body.statement_list) + '\n'
 
       if self.PRO:
-         last = find_nodes(self.subroutine_body.statement_list, Statement)[-1]
-         jump = find_nodes(last, JumpStatement)
+         last = self.subroutine_body.statement_list.get_statements()[-1]
+         jump = last.simple_statement and last.simple_statement.jump_statement
          if (not jump) or (not jump[0].RETURN):
             body += 'return _ret()\n'
 
@@ -295,22 +325,38 @@ class SubroutineDefinition(Node):
       return (header + nl + pyindent(body) +
               pycode(self.subroutine_body.NEWLINE[1]))
 
+
 class SubroutineBody(Node):
    def __str__(self):
       if self.parameter_list:
-         params = str(self.parameter_list)
+         params = ', ' + str(self.parameter_list)
       else:
          params = ''
       return '%s%s%s%sEND%s' % (self.IDENTIFIER, params, self.NEWLINE[0],
                                 indent(self.statement_list), self.NEWLINE[1])
 
-class ParameterList(Node):
+
+class _CommaSeparatedList(Node):
    def __str__(self):
-      if self.parameter_list:
-         plist = str(self.parameter_list)
+      if len(self) == 1:
+         return str(self[0])
+      return '%s, %s' % (self[0], self[2])
+   def pycode(self):
+      if len(self) == 1:
+         return pycode(self[0])
+      return '%s, %s' % (pycode(self[0]), pycode(self[2]))
+   def get_items(self):
+      if len(self) == 1:
+         items = [self[0]]
       else:
-         plist = '' 
-      return '%s, %s' % (plist, self.parameter)
+         items = self[0].get_items()
+	 items.append(self[2])
+      return items
+
+
+class ParameterList(_CommaSeparatedList):
+   pass
+
 
 class LabeledStatement(Node):
    def __str__(self):
@@ -325,6 +371,17 @@ class LabeledStatement(Node):
       return '%s:%s%s' % (pycomment(self.IDENTIFIER), nl,
                           pycode(self.statement))
 
+
+class StatementList(Node):
+   def get_statements(self):
+      if not self.statement_list:
+         stmts = [self.statement]
+      else:
+         stmts = self.statement_list.get_statements()
+	 stmts.append(self.statement)
+      return stmts
+
+
 class IfStatement(Node):
    def __str__(self):
       s = 'IF %s THEN %s' % (self.expression, self.if_clause)
@@ -337,6 +394,7 @@ class IfStatement(Node):
       if self.else_clause:
          s += '\nelse:%s' % pyindent(self.else_clause).rstrip('\n')
       return s
+
 
 class _IfOrElseClause(Node):
    def __str__(self):
@@ -351,6 +409,7 @@ class _IfOrElseClause(Node):
 
 class IfClause(_IfOrElseClause):  pass
 class ElseClause(_IfOrElseClause):  pass
+
 
 class SelectionStatement(Node):
    def pycode(self):
@@ -393,6 +452,7 @@ class SelectionStatement(Node):
 
       return s
 
+
 class SelectionStatementBody(Node):
    def __str__(self):
       s = ' %s OF%s%s' % (self.expression, self.NEWLINE,
@@ -400,6 +460,7 @@ class SelectionStatementBody(Node):
       if self.ELSE:
          s += indent('ELSE %s' % self.selection_clause)
       return s
+
 
 class SelectionClauseList(Node):
    def get_cases_and_actions(self):
@@ -413,6 +474,7 @@ class SelectionClauseList(Node):
       actions.append(pycode(self.selection_clause))
 
       return (cases, actions)
+
 
 class SelectionClause(Node):
    def __str__(self):
@@ -436,6 +498,7 @@ class SelectionClause(Node):
          return '\n' + pycode(self.statement) + pycode(self.NEWLINE)
       return '\npass' + pycode(self.NEWLINE)
 
+
 class ForStatement(Node):
    def __str__(self):
       if self.BEGIN:
@@ -453,6 +516,7 @@ class ForStatement(Node):
       return 'for %s:%s%s' % (pycode(self.for_index), nl,
                               pyindent(body).rstrip('\n'))
 
+
 class ForIndex(Node):
    def __str__(self):
       s = '%s = %s, %s' % (self.IDENTIFIER, self.expression[0],
@@ -461,12 +525,21 @@ class ForIndex(Node):
          s += ', %s' % self.expression[2]
       return s
    def pycode(self):
-      maxval = reduce_expression('(%s)+1' % pycode(self.expression[1]))
-      s = '%s in xrange(%s, %s' % (pycode(self.IDENTIFIER),
-                                   pycode(self.expression[0]), maxval)
-      if len(self) == 7:
-         s += ', %s' % pycode(self.expression[2])
+      minval = pycode(self.expression[0])
+      maxval = pycode(self.expression[1])
+      if len(self.expression) == 3:
+         incval = pycode(self.expression[2])
+      else:
+         incval = '1'
+
+      maxval = reduce_expression('(%s)+(%s)' % (maxval, incval))
+
+      s = '%s in arange(%s, %s' % (pycode(self.IDENTIFIER), minval, maxval)
+      if len(self.expression) == 3:
+         s += ', %s' % incval
+
       return s + ')'
+
 
 class WhileStatement(Node):
    def __str__(self):
@@ -486,6 +559,7 @@ class WhileStatement(Node):
       return 'while %s:%s%s' % (pycode(self.expression), nl,
                                 pyindent(body).rstrip('\n'))
 
+
 class RepeatStatement(Node):
    def __str__(self):
       if self.BEGIN:
@@ -504,6 +578,7 @@ class RepeatStatement(Node):
 				      pyindent('if %s:  break' %
 				               pycode(self.expression)))
 
+
 class SimpleStatement(Node):
    def __str__(self):
       if self.ON_IOERROR:
@@ -520,25 +595,10 @@ class SimpleStatement(Node):
          return Node.pycode(self)
       return pycomment(str(self))
 
-class _CommaSeparatedList(Node):
-   def __str__(self):
-      if len(self) == 1:
-         return str(self[0])
-      return '%s, %s' % (self[0], self[2])
-   def pycode(self):
-      if len(self) == 1:
-         return pycode(self[0])
-      return '%s, %s' % (pycode(self[0]), pycode(self[2]))
-   def get_items(self):
-      if len(self) == 1:
-         items = [self[0]]
-      else:
-         items = self[0].get_items()
-	 items.append(self[2])
-      return items
 
 class IdentifierList(_CommaSeparatedList):
    pass
+
 
 class JumpStatement(Node):
    def __str__(self):
@@ -560,6 +620,7 @@ class JumpStatement(Node):
          return 'return ' + pycode(self.expression)
       error.syntax_error('RETURN outside of PRO or FUNCTION', self.lineno)
       return ''
+
 
 class ProcedureCall(Node):
    def __str__(self):
@@ -586,12 +647,13 @@ class ProcedureCall(Node):
          error.mapping_error(str(e), self.lineno)
 	 return ''
 
+
 class ArgumentList(_CommaSeparatedList):
    def get_pars_and_keys(self):
       pars = []
       keys = []
 
-      for a in find_nodes(self, Argument):
+      for a in self.get_items():
 	 if a.EXTRA:
 	    # FIXME: implement this!
 	    error.conversion_error("can't handle _EXTRA yet", self.lineno)
@@ -605,6 +667,7 @@ class ArgumentList(_CommaSeparatedList):
 
       return (pars, keys)
 
+
 class _SpacedExpression(Node):
    def __str__(self):
       if (len(self) == 2) and (not self.NOT):
@@ -614,6 +677,7 @@ class _SpacedExpression(Node):
       if (len(self) == 2) and (not self.NOT):
          return '%s%s' % (pycode(self[0]), pycode(self[1]))
       return ' '.join([ pycode(c) for c in self ])
+
 
 class AssignmentStatement(_SpacedExpression):
    def pycode(self):
@@ -640,6 +704,7 @@ class AssignmentStatement(_SpacedExpression):
          return '%s = %s %s %s' % (lvalue, lvalue, binops[op], rvalue)
       return '%s = %s(%s, %s)' % (lvalue, funcops[op], lvalue, rvalue)
 
+
 class IncrementStatement(Node):
    def pycode(self):
       if self.PLUSPLUS:
@@ -647,6 +712,7 @@ class IncrementStatement(Node):
       else:
          op = '-'
       return '%s %s= 1' % (pycode(self.pointer_expression), op)
+
 
 class Expression(Node):
    def pycode(self):
@@ -657,6 +723,7 @@ class Expression(Node):
          return ''
       return Node.pycode(self)
 
+
 class ConditionalExpression(_SpacedExpression):
    def pycode(self):
       if not self.QUESTIONMARK:
@@ -664,6 +731,7 @@ class ConditionalExpression(_SpacedExpression):
       return ('((%s) and [%s] or [%s])[0]' %
               (pycode(self.logical_expression), pycode(self.expression),
 	       pycode(self.conditional_expression)))
+
 
 class LogicalExpression(_SpacedExpression):
    def pycode(self):
@@ -678,6 +746,7 @@ class LogicalExpression(_SpacedExpression):
       return 'logical_%s(%s, %s)' % (op, pycode(self.logical_expression),
                                      pycode(self.bitwise_expression))
 
+
 class BitwiseExpression(_SpacedExpression):
    def pycode(self):
       if len(self) == 1:
@@ -690,6 +759,7 @@ class BitwiseExpression(_SpacedExpression):
          op = 'xor'
       return 'bitwise_%s(%s, %s)' % (op, pycode(self.bitwise_expression),
                                      pycode(self.relational_expression))
+
 
 class RelationalExpression(_SpacedExpression):
    def pycode(self):
@@ -710,6 +780,7 @@ class RelationalExpression(_SpacedExpression):
       return '%s %s %s' % (pycode(self.relational_expression), op,
                            pycode(self.additive_expression))
 
+
 class AdditiveExpression(_SpacedExpression):
    def pycode(self):
       if (len(self) == 1) or self.PLUS or self.MINUS:
@@ -722,6 +793,7 @@ class AdditiveExpression(_SpacedExpression):
          f = 'maximum'
       return '%s(%s, %s)' % (f, pycode(self.additive_expression),
                              pycode(self.multiplicative_expression))
+
 
 class MultiplicativeExpression(_SpacedExpression):
    def pycode(self):
@@ -744,12 +816,14 @@ class MultiplicativeExpression(_SpacedExpression):
       return '%s %s %s' % (pycode(self.multiplicative_expression), op,
                            pycode(self.exponentiative_expression))
 
+
 class ExponentiativeExpression(_SpacedExpression):
    def pycode(self):
       if len(self) == 1:
          return _SpacedExpression.pycode(self)
       return '%s ** %s' % (pycode(self.exponentiative_expression),
                            pycode(self.unary_expression))
+
 
 class UnaryExpression(Node):
    def pycode(self):
@@ -760,6 +834,7 @@ class UnaryExpression(Node):
          return ''
       return Node.pycode(self)
 
+
 class PointerExpression(Node):
    def pycode(self):
       if self.TIMES:
@@ -767,6 +842,7 @@ class PointerExpression(Node):
          error.conversion_error("can't handle pointers yet", self.lineno)
          return ''
       return Node.pycode(self)
+
 
 class PostfixExpression(Node):
    def pycode(self):
@@ -798,6 +874,7 @@ class PostfixExpression(Node):
          error.mapping_error(str(e), self.lineno)
 	 return ''
 
+
 class PrimaryExpression(Node):
    def pycode(self):
       if self.LBRACE:
@@ -808,11 +885,13 @@ class PrimaryExpression(Node):
          return 'concatenate(%s)' % Node.pycode(self)
       return Node.pycode(self)
 
+
 class SubscriptList(Node):
    def pycode(self):
       if len(self) == 1:
          return pycode(self[0])
       return ','.join([pycode(self[2]), pycode(self[0])])
+
 
 class Subscript(Node):
    def pycode(self):
@@ -831,8 +910,10 @@ class Subscript(Node):
          return ':'
       return pycode(self.expression)
 
+
 class ExpressionList(_CommaSeparatedList):
    pass
+
 
 class StructureBody(Node):
    def __str__(self):
@@ -843,12 +924,15 @@ class StructureBody(Node):
          return s
       return Node.__str__(self)
 
+
 class StructureFieldList(_CommaSeparatedList):
    pass
+
 
 class StructureField(Node):
    def __str__(self):
       if self.INHERITS:
          return 'INHERITS %s' % self.IDENTIFIER
       return ''.join([ str(c) for c in self ])
+
 
