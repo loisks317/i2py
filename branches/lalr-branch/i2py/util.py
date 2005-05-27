@@ -24,16 +24,16 @@ General utility functions
 """
 
 
-idltab = '   '   # Tab for IDL code
-pytab  = '   '   # Tab for Python code
+_idltab = '   '   # Tab for IDL code
+_pytab  = '   '   # Tab for Python code
 
 
 def indent(obj, ntabs=1, tab=None):
    """
    Converts obj to a string, pads the beginning of each line with ntabs copies
-   of tab, and returns the result.  If tab is not given, idltab is used.
+   of tab, and returns the result.  If tab is not given, _idltab is used.
    """
-   if not tab:  tab = idltab
+   if not tab:  tab = _idltab
    pad = ntabs * tab
    return pad + str(obj).replace('\n', '\n' + pad).rstrip(tab)
 
@@ -52,9 +52,9 @@ def pyindent(obj, ntabs=1, tab=None):
    """
    Converts obj to a string of Python code with pycode(), pads the beginning
    of each line with ntabs copies of tab, and returns the result.  If tab is
-   not given, pytab is used.
+   not given, _pytab is used.
    """
-   if not tab:  tab = pytab
+   if not tab:  tab = _pytab
    pad = ntabs * tab
    return pad + pycode(obj).replace('\n', '\n' + pad).rstrip(tab)
 
@@ -64,5 +64,18 @@ def pycomment(obj):
    Calls pyindent() on obj with tab set to '# ' and returns the result.
    """
    return pyindent(obj, tab='# ')
+
+
+def reduce_expression(expr):
+   """
+   Tries to reduce expr (a string containing a Python expression) to a constant
+   value by evaluating it.  If no exception occurs during the evaluation, a
+   string representation of the result is returned.  Otherwise, expr is
+   returned unchanged.
+   """
+   try:
+      return str(eval(expr, {}))
+   except:
+      return expr
 
 
