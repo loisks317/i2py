@@ -18,16 +18,25 @@
 #  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
+
 """
-This file defines the tokens in the grammar and handles any preprocessing they
-need before being passed to the parser.  It also generates the lexer with lex
-(from PLY).
+Defines the tokens in the IDL grammar, handling any preprocessing they
+need before being passed to the parser, and generates the lexer.
 """
+
 
 import re
 import lex
 import ir
 import error
+
+
+################################################################################
+#
+# Define string tokens
+#
+################################################################################
+
 
 tokens = {
   't_STRING'		: r"""('[^'\n]*')|("[^"\n]*")""",
@@ -63,10 +72,6 @@ tokens = {
 globals().update(tokens)
 tokens = tuple([ t[2:] for t in tokens.keys() ])
 
-tokens += (
-  'AMPAMP', 'EXTRA', 'IDENTIFIER', 'NEWLINE', 'NUMBER', 'OP_EQUALS', 'SYS_VAR',
-)
-
 keywords = (
   'AND', 'BEGIN', 'BREAK', 'CASE', 'COMMON', 'COMPILE_OPT', 'CONTINUE', 'DO',
   'ELSE', 'END', 'ENDCASE', 'ENDELSE', 'ENDFOR', 'ENDIF', 'ENDREP', 'ENDSWITCH',
@@ -76,6 +81,19 @@ keywords = (
 )
 
 tokens += keywords
+
+
+################################################################################
+#
+# Define function tokens
+#
+################################################################################
+
+
+tokens += (
+  'AMPAMP', 'EXTRA', 'IDENTIFIER', 'NEWLINE', 'NUMBER', 'OP_EQUALS', 'SYS_VAR',
+)
+
 
 def t_NUMBER(t):
    r"""
@@ -94,8 +112,11 @@ def t_NUMBER(t):
    t.value = ir.Number(number_re.match(t.value.upper()).groupdict())
    return t
 
+# Leaving group tags in the RE for t_NUMBER will confuse the lexer, so we
+# compile and store the RE and then strip the tags from the doc string
 number_re = re.compile(t_NUMBER.__doc__, re.VERBOSE)
-t_NUMBER.__doc__ = re.sub(r'\?P<\w+>', '', t_NUMBER.__doc__)  # Strip group tags
+t_NUMBER.__doc__ = re.sub(r'\?P<\w+>', '', t_NUMBER.__doc__)
+
 
 def t_OP_EQUALS(t):
    r'''
@@ -122,11 +143,14 @@ def t_OP_EQUALS(t):
    t.value = t.value.upper()
    return t
 
+
 def t_EXTRA(t):
    r'(_[rR][eE][fF])?_[eE][xX][tT][rR][aA]'
    t.value = t.value.upper()
    return t
 
+
+# Handles identifiers, system variables, and keywords
 def t_IDENTIFIER(t):
    r'!?[a-zA-Z][\w$]*'
 
@@ -141,14 +165,17 @@ def t_IDENTIFIER(t):
 
    return t
 
+
 def t_continuation(t):
    r'\$[ \t]*(;.*)?\n+'
    t.lineno += t.value.count('\n')
+
 
 # Need this to avoid treating '&&' as NEWLINE
 def t_AMPAMP(t):
    r'&&'
    return t
+
 
 def t_NEWLINE(t):
    r'([ \t]* (((;.*)? \n) | &) [ \t]*)+'
@@ -156,16 +183,26 @@ def t_NEWLINE(t):
    t.value = ir.Newline(t.value)
    return t
 
+
+# Need to define this as a function (rather than using t_ignore) so that we can
+# catch leading whitespace in NEWLINE tokens
 def t_whitespace(t):
    r'[ \t]+'
    pass
+
 
 def t_error(t):
    error.syntax_error('illegal character: %s' % repr(t.value[0]), t.lineno)
    t.skip(1)
 
+
+################################################################################
+#
+# Create the lexer
+#
+################################################################################
+
+
 lexer = lex.lex()
 
-if __name__ == '__main__':
-   lex.runmain()
 
