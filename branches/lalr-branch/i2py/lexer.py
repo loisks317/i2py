@@ -27,7 +27,6 @@ need before being passed to the parser.  It also generates the lexer with lex
 import re
 import lex
 import ir
-import maps
 import error
 
 tokens = {

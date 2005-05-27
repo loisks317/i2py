@@ -24,7 +24,7 @@ will need to be expanded quite a bit before the package is ready for production
 use.
 """
 
-from fmap import map_proc, map_func
+from map import map_proc, map_func
 
 # These are essential to the function mapping mechanism and can't be changed!
 map_func('N_PARAMS', callfunc=(lambda i,o: 'n_params'))

@@ -29,7 +29,7 @@ parser.py.
 
 import error
 import yacc
-import fmap
+import map
 from util import indent, pycode, pyindent, pycomment
 
 
@@ -206,7 +206,7 @@ class TranslationUnit(Node):
    def pycode(self):
       parts = [pycode(self[-1])]
 
-      ec = fmap.get_extra_code()
+      ec = map.get_extra_code()
       if ec:
          parts.append(ec)
 
@@ -248,8 +248,8 @@ class SubroutineDefinition(Node):
 	       pars.append(pycode(p.IDENTIFIER))
 
       name = str(self.subroutine_body.IDENTIFIER)
-      map = fmap.get_map(name)
-      if not map:
+      fmap = map.get_map(name)
+      if not fmap:
          inpars  = range(1, len(pars)+1)
 	 outpars = inpars
 	 inkeys  = [ k[0] for k in keys ]
@@ -257,17 +257,17 @@ class SubroutineDefinition(Node):
 
       if self.PRO:
          _in_pro = True
-	 if not map:
-	    map = fmap.map_proc(name, inpars=inpars, outpars=outpars,
+	 if not fmap:
+	    fmap = map.map_proc(name, inpars=inpars, outpars=outpars,
 	                        inkeys=inkeys, outkeys=outkeys)
       else:
          _in_function = True
 	 if not map:
-	    map = fmap.map_func(name, pars=inpars, keys=inkeys)
+	    fmap = map.map_func(name, pars=inpars, keys=inkeys)
 
       try:
-         header, body = map.pydef(pars, keys)
-      except fmap.Error, e:
+         header, body = fmap.pydef(pars, keys)
+      except map.Error, e:
          error.mapping_error(str(e), self.lineno)
 	 header, body = '', ''
 
@@ -571,15 +571,15 @@ class ProcedureCall(Node):
          keys = []
 
       name = str(self.IDENTIFIER)
-      map = fmap.get_map(name)
+      fmap = map.get_map(name)
 
-      if not map:
+      if not fmap:
 	 keys = [ '%s=%s' % (k[0], k[1]) for k in keys ]
          return '%s(%s)' % (pycode(self.IDENTIFIER), ', '.join(pars + keys))
 
       try:
-         return map.pycall(pars, keys)
-      except fmap.Error, e:
+         return fmap.pycall(pars, keys)
+      except map.Error, e:
          error.mapping_error(str(e), self.lineno)
 	 return ''
 
@@ -783,15 +783,15 @@ class PostfixExpression(Node):
          keys = []
 
       name = str(self.IDENTIFIER)
-      map = fmap.get_map(name)
+      fmap = map.get_map(name)
 
-      if not map:
+      if not fmap:
 	 keys = [ '%s=%s' % (k[0], k[1]) for k in keys ]
          return '%s(%s)' % (pycode(self.IDENTIFIER), ', '.join(pars + keys))
 
       try:
-         return map.pycall(pars, keys)
-      except fmap.Error, e:
+         return fmap.pycall(pars, keys)
+      except map.Error, e:
          error.mapping_error(str(e), self.lineno)
 	 return ''
 
