@@ -18,54 +18,37 @@
 #  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
+
 """
-This file contains the IDL grammar specification.  From the specification
-string, it generates the functions needed for PLY's yacc for each non-terminal
-symbol; each function generates a Node object of the appropriate subclass, as
-defined in ir.py.  Finally, it uses yacc to generate the parser.
+Defines the IDL grammar (productions and precedence rules) and generates the
+parser.  Also completes the ir module by adding some information that's
+automatically extracted from the grammar.
 """
+
 
 import os.path
-from lexer import *
+import error
+from lexer import lexer, tokens
 import yacc
 import ir
-import error
-
 try:
    set
 except NameError:
    from sets import Set as set  # Python 2.3
 
-def p_error(p):
-   error.syntax_error('invalid syntax at %s' % repr(str(p.value)), p.lineno)
 
-def build_productions():
-   funcdefs = []
-   classdefs = []
+################################################################################
+#
+# Grammar specification
+#
+################################################################################
 
-   for rule in productions.strip().split('\n\n'):
-      symbols = [ s for s in rule.split() if s not in (':', '|', '%prec') ]
-      rulename = symbols[0]
-      funcname = 'p_' + rulename
-      classname = ''.join([ s.capitalize() for s in rulename.split('_') ])
-
-      if not hasattr(ir, classname):
-         exec ('class %s(Node):  pass\n' % classname) in ir.__dict__
-      cls = getattr(ir, classname)
-      if (not isinstance(cls, type)) or (not issubclass(cls, ir.Node)):
-         raise error.InternalError('object %s is not a Node' % classname)
-      cls._symbols = set(symbols)
-
-      funcdoc = rule.replace('\n\t', ' ', 1)
-      funcdefs.append('def %s(p):\n   \'\'\'%s\'\'\'\n   p[0] = ir.%s(p)\n' %
-                      (funcname, funcdoc, classname))
-
-   exec ''.join(funcdefs) in globals()
 
 precedence = (
    ('nonassoc', 'LOWER_THAN_ELSE', 'LOWER_THAN_KEYWORD'),
    ('nonassoc', 'ELSE', 'KEYWORD'),
 )
+
 
 productions = '''
 translation_unit
@@ -117,8 +100,8 @@ labeled_statement
 	| IDENTIFIER COLON NEWLINE statement
 
 if_statement 
-	: IF expression THEN if_clause %prec LOWER_THAN_ELSE
-	| IF expression THEN if_clause ELSE else_clause 
+	: IF expression THEN if_clause			%prec LOWER_THAN_ELSE
+	| IF expression THEN if_clause ELSE else_clause %prec ELSE
 
 if_clause
 	: statement
@@ -198,8 +181,8 @@ argument_list
 	| argument_list COMMA argument
 
 argument
-	: expression %prec LOWER_THAN_KEYWORD
-	| IDENTIFIER EQUALS expression %prec KEYWORD
+	: expression			%prec LOWER_THAN_KEYWORD
+	| IDENTIFIER EQUALS expression	%prec KEYWORD
 	| DIVIDE IDENTIFIER
 	| EXTRA EQUALS IDENTIFIER
 	| EXTRA EQUALS EXTRA
@@ -326,12 +309,67 @@ structure_field
 	| INHERITS IDENTIFIER
 '''
 
-build_productions()
 
+################################################################################
+#
+# Parser creation
+#
+################################################################################
+
+
+def p_error(p):
+   "Error function used by the parser"
+   error.syntax_error('invalid syntax at %s' % repr(str(p.value)), p.lineno)
+
+
+def build_productions():
+   """
+   From the productions string, creates the functions needed by yacc() to
+   generate the parser.  Also completes the hierarchy of Node classes in the
+   ir module by creating Node subclasses for all non-terminal symbols that
+   don't already have one and setting the _symbols field (the list of symbols
+   in the relevant production) in each Node subclass.
+   """
+
+   funcdefs = []
+   classdefs = []
+
+   for prod in productions.strip().split('\n\n'):
+      symbols = [ s for s in prod.split() if s not in (':', '|', '%prec') ]
+      prodname = symbols[0]
+      funcname = 'p_' + prodname
+      classname = ''.join([ s.capitalize() for s in prodname.split('_') ])
+
+      if not hasattr(ir, classname):
+         exec ('class %s(Node):  pass\n' % classname) in ir.__dict__
+      cls = getattr(ir, classname)
+      if (not isinstance(cls, type)) or (not issubclass(cls, ir.Node)):
+         raise error.InternalError('object %s is not a Node' % classname)
+      cls._symbols = set(symbols)
+
+      funcdoc = prod.replace('\n\t', ' ', 1)
+      funcdefs.append("def %s(p):\n   '''%s'''\n   p[0] = ir.%s(p)\n" %
+                      (funcname, funcdoc, classname))
+
+   exec ''.join(funcdefs) in globals()
+
+
+def parse(input, debug=False):
+   """
+   Parses the given input string (which must contain IDL code) and returns the
+   resulting abstract syntax tree.  If debug is true, any syntax errors will
+   produce parser debugging output.
+   """
+   lexer.lineno = 1
+   return parser.parse(input, lexer, debug)
+
+
+#
+# Create the parser
+#
+
+build_productions()
 parser = yacc.yacc(method='LALR', debug=True, tabmodule='ytab',
                    debugfile='y.output', outputdir=os.path.dirname(__file__))
 
-def parse(*pars, **keys):
-   lexer.lineno = 1
-   return parser.parse(*pars, **keys)
 
