@@ -155,6 +155,9 @@ class Name(Leaf):
    def __str__(self):
       return self.raw.upper()
    def pycode(self):
+      vmap = map.get_variable_map(self.raw.upper())
+      if vmap:
+         return vmap.pyvalue()
       s = self.raw.lower()
       if s[0] == '!':
          s = '_sys_' + s[1:]
@@ -248,7 +251,7 @@ class SubroutineDefinition(Node):
 	       pars.append(pycode(p.IDENTIFIER))
 
       name = str(self.subroutine_body.IDENTIFIER)
-      fmap = map.get_map(name)
+      fmap = map.get_subroutine_map(name)
       if not fmap:
          inpars  = range(1, len(pars)+1)
 	 outpars = inpars
@@ -262,7 +265,7 @@ class SubroutineDefinition(Node):
 	                        inkeys=inkeys, outkeys=outkeys)
       else:
          _in_function = True
-	 if not map:
+	 if not fmap:
 	    fmap = map.map_func(name, pars=inpars, keys=inkeys)
 
       try:
@@ -571,7 +574,7 @@ class ProcedureCall(Node):
          keys = []
 
       name = str(self.IDENTIFIER)
-      fmap = map.get_map(name)
+      fmap = map.get_subroutine_map(name)
 
       if not fmap:
 	 keys = [ '%s=%s' % (k[0], k[1]) for k in keys ]
@@ -783,7 +786,7 @@ class PostfixExpression(Node):
          keys = []
 
       name = str(self.IDENTIFIER)
-      fmap = map.get_map(name)
+      fmap = map.get_subroutine_map(name)
 
       if not fmap:
 	 keys = [ '%s=%s' % (k[0], k[1]) for k in keys ]

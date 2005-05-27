@@ -25,12 +25,31 @@ mess that needs to be cleaned up!
 
 from util import pyindent
 
-_subroutines = {}
-_extra_code  = []
-
 
 class Error(Exception):
    pass
+
+
+#
+# Extra code handling
+#
+
+
+_extra_code  = []
+
+def add_extra_code(code):
+   _extra_code.append(code)
+
+def get_extra_code():
+   return '\n\n'.join([ c.strip() for c in _extra_code ])
+
+
+#
+# Subroutine maps
+#
+
+
+_subroutines = {}
 
 
 class SubroutineMapping(object):
@@ -224,12 +243,36 @@ def map_func(name, pyname=None, pars=(), noptional=0, keys=(), callfunc=None,
    _subroutines[map.name] = map
    return map
 
-def get_map(name):
+def get_subroutine_map(name):
    return _subroutines.get(name)
 
-def add_extra_code(code):
-   _extra_code.append(code)
 
-def get_extra_code():
-   return '\n\n'.join([ c.strip() for c in _extra_code ])
+#
+# Variable maps
+#
+
+
+_variables   = {}
+
+
+class VariableMapping(object):
+   def __init__(self, name, pyname, extracode=None):
+      self.name = name.upper()
+      self.pyname = pyname
+      self.extracode = extracode
+
+   def pyvalue(self):
+      if self.extracode:
+         if self.extracode not in _extra_code:
+	    _extra_code.append(self.extracode)
+      return self.pyname
+
+
+def map_var(name, pyname, extracode=None):
+   map = VariableMapping(name, pyname, extracode)
+   _variables[map.name] = map
+   return map
+
+def get_variable_map(name):
+   return _variables.get(name)
 
