@@ -26,6 +26,7 @@ __str__() or pycode() method, respectively.
 """
 
 
+import config
 import error
 from util import *
 import yacc
@@ -177,14 +178,14 @@ class Name(Leaf):
    def __init__(self, raw):
       self.raw = raw
    def __str__(self):
-      return self.raw.upper()
+      return config.idlnameconv(self.raw)
    def pycode(self):
       vmap = map.get_variable_map(self.raw)
       if vmap:
          return vmap.pyvalue()
-      s = self.raw.lower()
+      s = config.pynameconv(self.raw)
       if s[0] == '!':
-         s = '_sys_' + s[1:]
+         s = config.sysvarprefix + s[1:]
       return s
 
 
@@ -241,7 +242,7 @@ class TranslationUnit(Node):
       if ec:
          parts.append(ec)
 
-      parts.append('from numarray import *')
+      parts.append('from %s import *' % config.arraymodule)
 
       nl = self.NEWLINE
       if nl:

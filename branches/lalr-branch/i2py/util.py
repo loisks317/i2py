@@ -24,16 +24,15 @@ General utility functions
 """
 
 
-_idltab = '   '   # Tab for IDL code
-_pytab  = '   '   # Tab for Python code
+import config
 
 
 def indent(obj, ntabs=1, tab=None):
    """
    Converts obj to a string, pads the beginning of each line with ntabs copies
-   of tab, and returns the result.  If tab is not given, _idltab is used.
+   of tab, and returns the result.  If tab is not given, config.idltab is used.
    """
-   if not tab:  tab = _idltab
+   if not tab:  tab = config.idltab
    pad = ntabs * tab
    return pad + str(obj).replace('\n', '\n' + pad).rstrip(tab)
 
@@ -52,9 +51,9 @@ def pyindent(obj, ntabs=1, tab=None):
    """
    Converts obj to a string of Python code with pycode(), pads the beginning
    of each line with ntabs copies of tab, and returns the result.  If tab is
-   not given, _pytab is used.
+   not given, config.pytab is used.
    """
-   if not tab:  tab = _pytab
+   if not tab:  tab = config.pytab
    pad = ntabs * tab
    return pad + pycode(obj).replace('\n', '\n' + pad).rstrip(tab)
 

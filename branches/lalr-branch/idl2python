@@ -36,12 +36,13 @@ will look for a file named 'i2pyrc' or 'i2pyrc.py' in the current directory.
 If such a file exists, it will be used as the configuration file.
 """
 
+
 import sys
 import getopt
 import fileinput
 import os.path
+import i2py
 
-from i2py import *
 
 default_rcfile = 'i2pyrc'
 rcfile = None
@@ -60,7 +61,9 @@ if not rcfile:
          rcfile = f
 	 break
 if rcfile:
-   execfile(rcfile)
+   rcdict = {'map_var':i2py.map_var, 'map_pro':i2py.map_pro,
+             'map_func':i2py.map_func, 'config':i2py.config}
+   execfile(rcfile, rcdict)
 
 exit_stat = 0
 
@@ -68,18 +71,18 @@ def process_file(input):
    global exit_stat
 
    input = '\n'.join(input) + '\n'
-   prog = parse(input)
+   prog = i2py.parse(input)
    if prog:
       if debug:
          prog = str(prog).rstrip('\n')
       else:
          prog = prog.pycode().rstrip('\n') + '\n'
 
-   if error_occurred():
-      for e in get_error_list():
+   if i2py.error_occurred():
+      for e in i2py.get_error_list():
          sys.stderr.write('%s:%s\n' % (filename, e))
       exit_stat = 1
-      clear_error_list()
+      i2py.clear_error_list()
    else:
       print prog
 

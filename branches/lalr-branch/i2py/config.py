@@ -18,11 +18,20 @@
 #  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-__version__ = '0.0.9'
 
-import config
-from error import error_occurred, get_error_list, clear_error_list
-from parser import parse
-from map import map_pro, map_func, map_var, add_extra_code
-import maplib
+"""
+Package-wide configuration data
+"""
+
+
+import string
+
+
+arraymodule	= 'numarray'	# Name of array module
+idltab		= '   '		# Tab for IDL code
+pytab		= '   '		# Tab for Python code
+sysvarprefix	= '_sys_'	# Replacement for '!' in system variable names
+idlnameconv	= string.upper	# Conversion function for IDL identifiers
+pynameconv	= string.lower	# Conversion function for Python identifiers
+
 
