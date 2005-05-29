@@ -167,7 +167,7 @@ def t_IDENTIFIER(t):
 
 
 def t_continuation(t):
-   r'\$[ \t]*(;.*)?\n+'
+   r'\$([ \t]*(;.*)?\n)+'
    t.lineno += t.value.count('\n')
 
 

@@ -182,11 +182,8 @@ class Name(Leaf):
    def pycode(self):
       vmap = map.get_variable_map(self.raw)
       if vmap:
-         return vmap.pyvalue()
-      s = config.pynameconv(self.raw)
-      if s[0] == '!':
-         s = config.sysvarprefix + s[1:]
-      return s
+         return vmap.pyname()
+      return pyname(self.raw)
 
 
 class Number(Leaf):

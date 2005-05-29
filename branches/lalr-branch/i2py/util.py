@@ -65,6 +65,18 @@ def pycomment(obj):
    return pyindent(obj, tab='# ')
 
 
+def pyname(name):
+   """
+   Converts name to a Python name by calling config.pynameconv() on it.  If the
+   converted name begins with '!', the '!' is replaced by config.sysvarprefix.
+   Returns the resulting name.
+   """
+   name = config.pynameconv(name)
+   if name[0] == '!':
+      name = config.sysvarprefix + name[1:]
+   return name
+
+
 def reduce_expression(expr):
    """
    Tries to reduce expr (a string containing a Python expression) to a constant
