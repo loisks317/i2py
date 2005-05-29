@@ -37,11 +37,12 @@ class Error(Exception):
 
 _extra_code  = []
 
-def add_extra_code(code):
-   _extra_code.append(code)
-
 def get_extra_code():
    return '\n\n'.join([ c.strip() for c in _extra_code ])
+
+def clear_extra_code():
+   global _extra_code
+   _extra_code  = []
 
 
 #

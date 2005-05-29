@@ -31,6 +31,7 @@ import error
 from lexer import lexer, tokens
 import yacc
 import ir
+import map
 try:
    set
 except NameError:
@@ -361,7 +362,18 @@ def parse(input, debug=False):
    otherwise, returns None.  If debug is true, any syntax errors will
    produce parser debugging output.
    """
+
+   # Reset global state stuff
+   error.clear_error_list()
+   map.clear_extra_code()
    lexer.lineno = 1   # This needs to be reset manually (PLY bug?)
+
+   # Ensure that the input contains a final newline (the parser will choke
+   # otherwise)
+   if input[-1] != '\n':
+      input += '\n'
+
+   # Parse input and return the result
    return parser.parse(input, lexer, debug)
 
 

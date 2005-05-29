@@ -304,16 +304,13 @@ class SubroutineDefinition(Node):
          error.mapping_error(str(e), self.lineno)
 	 header, body = '', ''
 
-      body += '\n' + pycode(self.subroutine_body.statement_list) + '\n'
+      body += '\n' + pycode(self.subroutine_body.statement_list)
 
       if self.PRO:
          last = self.subroutine_body.statement_list.get_statements()[-1]
          jump = last.simple_statement and last.simple_statement.jump_statement
-         if (not jump) or (not jump[0].RETURN):
-            body += 'return _ret()\n'
-
-      _in_pro = False
-      _in_function = False
+         if (not jump) or (not jump.RETURN):
+            body += '\nreturn _ret()\n'
 
       nl = self.subroutine_body.NEWLINE[0]
       doc = nl.asdocstring()
@@ -321,6 +318,9 @@ class SubroutineDefinition(Node):
          nl = '\n' + pyindent(doc) + '\n\n'
       else:
          nl = pycode(nl)
+
+      _in_pro = False
+      _in_function = False
 
       return (header + nl + pyindent(body) +
               pycode(self.subroutine_body.NEWLINE[1]))
