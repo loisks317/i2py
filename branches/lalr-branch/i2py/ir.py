@@ -141,8 +141,12 @@ class Node(object):
 
 class Newline(Leaf):
    def __init__(self, raw):
+      rawlines = raw.split('\n')
+      rawlines = [rawlines[0]] + [ l.strip() for l in rawlines[1:] ]
+
       self.lines = []
-      for l in raw.split('\n'):
+
+      for l in rawlines:
 	 if l.strip() == '':
 	    l = ''
 	 else:
@@ -293,7 +297,7 @@ class SubroutineDefinition(Node):
       else:
          _in_function = True
 	 if not fmap:
-	    fmap = map.map_func(name, pars=inpars, keys=inkeys)
+	    fmap = map.map_func(name, inpars=inpars, inkeys=inkeys)
 
       try:
          header, body = fmap.pydef(pars, keys)

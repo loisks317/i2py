@@ -371,7 +371,7 @@ class SubroutineMapping(Mapping):
 	       body += '  return (%s)' % ', '.join(out)
          else:
 	    # Output values, some or all of which are optional
-	    retbody = '_optrv = zip(_opt, [%s])\n' % ','.join(out_optional)
+	    retbody = '_optrv = zip(_opt, [%s])\n' % ', '.join(out_optional)
 	    if out:
 	       retbody += '_rv = [%s]\n_rv += ' % ', '.join(out)
 	    else:
