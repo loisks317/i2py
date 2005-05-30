@@ -68,18 +68,18 @@ def typeconv(typename):
    "Returns a type-conversion callfunc for type typename"
    return (lambda i,o: 'array(%s, copy=0).astype(%s)' % (i[0], typename))
 
-map_func('DOUBLE', pars=[1], callfunc=typeconv('Float64'))
-map_func('FIX', pars=[1], callfunc=typeconv('Int32'))
-map_func('FLOAT', pars=[1], callfunc=typeconv('Float32'))
-map_func('FLTARR', pars=range(1,9), noptional=7, callfunc=arrgen('Float32'))
-map_func('LONG', pars=[1], callfunc=typeconv('Int32'))
-map_func('MIN', pars=[1],
+map_func('DOUBLE', inpars=[1], callfunc=typeconv('Float64'))
+map_func('FIX', inpars=[1], callfunc=typeconv('Int32'))
+map_func('FLOAT', inpars=[1], callfunc=typeconv('Float32'))
+map_func('FLTARR', inpars=range(1,9), noptional=7, callfunc=arrgen('Float32'))
+map_func('LONG', inpars=[1], callfunc=typeconv('Int32'))
+map_func('MIN', inpars=[1],
          callfunc=(lambda i,o: 'array(%s, copy=0).min()' % i[0]))
-map_func('N_ELEMENTS', pars=[1],
+map_func('N_ELEMENTS', inpars=[1],
          callfunc=(lambda i,o: 'array(%s, copy=0).nelements()' % i[0]))
-map_func('REPLICATE', pars=range(1,10), noptional=7,
+map_func('REPLICATE', inpars=range(1,10), noptional=7,
          callfunc=(lambda i,o: '(%s)*ones([%s])' % (i[0],
 	           ', '.join([ i[n] for n in xrange(len(i)-1, 0, -1) ]))))
-map_func('WHERE', pars=[1,2], noptional=1,
+map_func('WHERE', inpars=[1,2], noptional=1,
          callfunc=(lambda i,o: 'where(ravel(%s))[0]' % i[0]))
 

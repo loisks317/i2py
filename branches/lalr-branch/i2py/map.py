@@ -110,7 +110,7 @@ class VariableMapping(Mapping):
       pyname is the Python code that should replace the IDL name (if not
       provided, defaults to util.pyname(name)), and extracode is a string or
       list of strings containing necessary top-level module code (e.g. import
-      statements, variable defintions).  If readonly is True, then the mapping
+      statements, variable definitions).  If readonly is True, then the mapping
       for this variable is fixed and cannot be overwritten.
       """
 
@@ -135,7 +135,10 @@ class VariableMapping(Mapping):
 
 
 def map_var(name, pycode=None, extracode=None, readonly=False):
-   "Creates and returns a new VariableMapping using the given arguments"
+   """
+   Creates and returns a new VariableMapping, passing the given arguments to
+   the constructor
+   """
    return VariableMapping(name, pycode, extracode, readonly)
 
 
@@ -162,7 +165,7 @@ _subroutines = {}
 class SubroutineMapping(Mapping):
    """
    Defines how to generate Python code for the definition and invocation of a
-   specific IDL subroutine.
+   specific IDL subroutine
    """
 
    def __init__(self, name, pyname=None, function=False,
@@ -268,7 +271,7 @@ class SubroutineMapping(Mapping):
       Returns a tuple of two strings.  The first is the 'def' line for the
       function definition.  The second is the beginning of the function body
       (not indented with respect to the 'def'), which contains needed machinery
-      for handling input and output to the function.
+      for handling input and output for the function.
       """
 
       # Make copies of the parameter and keyword lists
@@ -383,11 +386,21 @@ class SubroutineMapping(Mapping):
       # Add any needed extra code
       add_extra_code(self.extracode)
 
+      # Return the definition code
       return (header, body)
 
    def pycall(self, pars=(), keys=()):
-      # Store parameter and keyword lists (assumes they've already been
-      # converted with pyname())
+      """
+      Returns a string containing the Python statement or expression code for a
+      call to the subroutine.
+
+      pars is a sequence of strings, each of which is the Pythonized value of a
+      parameter argument to the subroutine.  keys is a sequence of sequences,
+      each of which contains two strings.  The strings are the Pythonized
+      name and value of a keyword argument to the subroutine.
+      """
+
+      # Make copies of the parameter and keyword lists
       pars = tuple(pars)
       keys = tuple(keys)
 
@@ -402,81 +415,127 @@ class SubroutineMapping(Mapping):
 	              "parameters (called with %d)") %
 		     (self.name, nrequired, npars))
 
-      input  = ([ pars[i] for i in range(min(nrequired, npars))
-                  if i+1 in self.inpars ])
+      #
+      # Handle the parameter arguments
+      #
+
+      # Required input parameters
+      input = ([ pars[i] for i in range(min(nrequired, npars))
+                 if i+1 in self.inpars ])
+
+      # Optional input parameters
       if npars > nrequired:
          for i in range(nrequired, npars):
 	    if i+1 in self.inpars:
+	       # Real optional input parameter
 	       input.append(pars[i])
 	    elif i+1 in self.outpars:
+	       # Flag to indicate that an optional output parameter should be
+	       # returned
 	       input.append('True')
 
+      # Output parameters
       output = [ pars[i] for i in range(npars) if i+1 in self.outpars ]
+
+      #
+      # Handle the keyword arguments
+      #
 
       for (name, value) in keys:
 	 uc_name = name.upper()
-         matches = [ k for k in self.allkeys if k.startswith(uc_name) ]
 
+	 # Try to find a match for the keyword.  This is complicated by the
+	 # fact that, in IDL, keyword names can be abbreviated as long as they
+	 # can still be uniquely identified.
+         matches = [ k for k in self.allkeys if k.startswith(uc_name) ]
 	 if len(matches) == 0:
+	    # No matches; throw an error
 	    raise Error("'%s' is not a valid keyword for subroutine '%s'" %
 	                (name, self.name))
 	 elif len(matches) == 1:
+	    # Only one match; good
 	    uc_name = matches[0]
 	 elif uc_name not in matches:
+	    # Multiple matches; unless one of the matches is exactly what we
+	    # want (i.e. the keyword is a prefix of one or more others), throw
+	    # an error
 	    raise Error(("identifier '%s' matches multiple keywords " +
 	                 "for subroutine '%s': %s") %
 			(name, self.name, matches))
 
+	 # Pythonize the full name
          name = util.pyname(uc_name)
 
 	 if uc_name in self.inkeys:
+	    # Input keyword
 	    input.append('%s=%s' % (name, value))
 	 if uc_name in self.outkeys:
+	    # Output keyword
 	    if uc_name not in self.inkeys:
+	       # If the keyword is output only, we need to flag that the value
+	       # should be returned
 	       input.append('%s=True' % name)
 	    output.append(value)
 
+      # Add any needed extra code
       add_extra_code(self.extracode)
 
+      # If there's a custom callfunc, use it to generate the call code
       if self.callfunc:
          return self.callfunc(input, output)
 
+      # Build the input and output strings
       input  = ', '.join(input)
       if output:
          output = ', '.join(output) + ' = '
       else:
          output = ''
 
+      # Return the call code
       return '%s%s(%s)' % (output, self.pyname(), input)
 
 
 def map_pro(name, pyname=None, inpars=(), outpars=(), noptional=0,
             inkeys=(), outkeys=(), callfunc=None, extracode=None,
 	    readonly=False):
+   """
+   Creates and returns a new SubroutineMapping for an IDL procedure, passing
+   the given arguments to the constructor
+   """
    return SubroutineMapping(name, pyname=pyname, function=False,
                             inpars=inpars, outpars=outpars, noptional=noptional,
                             inkeys=inkeys, outkeys=outkeys, callfunc=callfunc,
 			    extracode=extracode, readonly=readonly)
 
 
-def map_func(name, pyname=None, pars=(), noptional=0, keys=(), callfunc=None,
-             extracode=None, readonly=False):
-   return SubroutineMapping(name, pyname=pyname, function=True, inpars=pars,
-                            noptional=noptional, inkeys=keys, callfunc=callfunc,
-			    extracode=extracode, readonly=readonly)
+def map_func(name, pyname=None, inpars=(), noptional=0, inkeys=(),
+             callfunc=None, extracode=None, readonly=False):
+   """
+   Creates and returns a new SubroutineMapping for an IDL function, passing
+   the given arguments to the constructor.  Note that unlike procedure
+   mappings, function mappings cannot have output parameters/keywords.
+   """
+   return SubroutineMapping(name, pyname=pyname, function=True,
+                            inpars=inpars, noptional=noptional, inkeys=inkeys,
+			    callfunc=callfunc, extracode=extracode,
+			    readonly=readonly)
 
 
 def get_subroutine_map(name):
+   """
+   If a SubroutineMapping exists for the given subroutine name, returns it.
+   Otherwise, returns None.
+   """
    return _subroutines.get(name.upper())
 
 
 #
-# Read-only builtin mappings (these are needed by the function-mapping
+# Read-only builtin mappings (these are needed by the subroutine-mapping
 # mechanism itself)
 #
 
 map_func('N_PARAMS', callfunc=(lambda i,o: 'n_params'), readonly=True)
-map_func('KEYWORD_SET', pars=[1],
+map_func('KEYWORD_SET', inpars=[1],
          callfunc=(lambda i,o: '(%s is not None)' % i[0]), readonly=True)
 
 
