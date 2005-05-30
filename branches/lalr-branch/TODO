@@ -1,3 +1,9 @@
+Known Bugs
+----------
+- doc strings aren't extracted correctly if there are empty comment lines after
+  the ';-' one (need to strip those)
+- need to support strings with escaped ' and " characters
+
 Conversion
 ----------
 - implement structures
