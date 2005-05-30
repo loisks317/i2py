@@ -1,8 +1,3 @@
-idl2python
-----------
-- clean up
-- make more robust
-
 Conversion
 ----------
 - implement structures
@@ -11,8 +6,6 @@ Conversion
 
 Mappings
 --------
-- clean up the horrible subroutine-mapping code
-- think of something sensible to do with variable maps
 - think of something to do with WHERE and other functions that use output
   parameters/keywords
 
