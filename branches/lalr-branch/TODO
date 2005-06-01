@@ -6,6 +6,7 @@ Known Bugs
 
 Conversion
 ----------
+- have option of producing "bad" output for unconvertible IDL constructs (JH)
 - implement structures
 - implement assignment and increment as expressions
 - figure out a way to preserve line breaks (and comments) with '$'
