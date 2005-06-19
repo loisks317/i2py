@@ -1,5 +1,0 @@
-include AUTHORS
-include COPYING
-include ChangeLog
-include NEWS
-recursive-include doc *.html
